@@ -25,9 +25,9 @@ targets:
         DEVELOPMENT_TEAM: A63WD37CXZ
         CODE_SIGN_STYLE: Manual
         PROVISIONING_PROFILE_SPECIFIER: "Victor Lamache Dev Profile"
-        PROVISIONING_PROFILE: "d36ac767-de69-4307-9e3b-d15995a60f5d"
         CODE_SIGN_IDENTITY: "Apple Development"
         SWIFT_VERSION: "5.9"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     dependencies:
       - sdk: MediaPlayer.framework

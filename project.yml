@@ -24,7 +24,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.victorlamache.contactdev
         DEVELOPMENT_TEAM: A63WD37CXZ
         CODE_SIGN_STYLE: Manual
-        PROVISIONING_PROFILE_SPECIFIER: "Victor Lamache Dev"
+        PROVISIONING_PROFILE_SPECIFIER: "Victor Lamache Dev Profile"
         CODE_SIGN_IDENTITY: "Apple Development"
         SWIFT_VERSION: "5.9"
     dependencies:

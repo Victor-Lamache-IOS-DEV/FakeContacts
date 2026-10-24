@@ -37,7 +37,7 @@ jobs:
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/3068343f-f47c-4ab0-9f62-efbb8ae0ee19.mobileprovision
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/d36ac767-de69-4307-9e3b-d15995a60f5d.mobileprovision
 
       - name: Install XcodeGen
         run: brew install xcodegen

@@ -207,11 +207,24 @@ struct ContactsListView: View {
             }
             .overlay {
                 if store.permissionDenied {
-                    ContentUnavailableView(
-                        "No Access to Contacts",
-                        systemImage: "person.crop.circle.badge.exclamationmark",
-                        description: Text("Allow access in Settings → Privacy → Contacts")
-                    )
+                    if #available(iOS 17.0, *) {
+                        ContentUnavailableView(
+                            "No Access to Contacts",
+                            systemImage: "person.crop.circle.badge.exclamationmark",
+                            description: Text("Allow access in Settings → Privacy → Contacts")
+                        )
+                    } else {
+                        VStack(spacing: 12) {
+                            Image(systemName: "person.crop.circle.badge.exclamationmark")
+                                .font(.system(size: 48))
+                                .foregroundColor(.secondary)
+                            Text("No Access to Contacts")
+                                .font(.headline)
+                            Text("Allow access in Settings → Privacy → Contacts")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
             }
         }

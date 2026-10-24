@@ -2,7 +2,7 @@ name: FakeContacts
 options:
   bundleIdPrefix: com.victorlamache
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
 
 targets:
   FakeContacts:

@@ -1,0 +1,31 @@
+name: FakeContacts
+options:
+  bundleIdPrefix: com.victorlamache
+  deploymentTarget:
+    iOS: "16.0"
+
+targets:
+  FakeContacts:
+    type: application
+    platform: iOS
+    sources:
+      - FakeContacts
+    info:
+      path: FakeContacts/Info.plist
+      properties:
+        CFBundleDisplayName: Contacts
+        CFBundleName: Contacts
+        UILaunchScreen: {}
+        NSContactsUsageDescription: "This app uses your contacts to display them."
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.victorlamache.contactdev
+        DEVELOPMENT_TEAM: A63WD37CXZ
+        CODE_SIGN_STYLE: Manual
+        PROVISIONING_PROFILE_SPECIFIER: "Victor Lamache Dev"
+        CODE_SIGN_IDENTITY: "Apple Development"
+        SWIFT_VERSION: "5.9"
+    dependencies:
+      - sdk: MediaPlayer.framework

@@ -1,0 +1,18 @@
+# Certificates and secrets (NEVER commit these!)
+certs/
+*.key
+*.csr
+*.cer
+*.p12
+*.mobileprovision
+
+# Build outputs
+build/
+Payload/
+*.ipa
+*.xcarchive
+
+# Xcode project generated files
+*.xcodeproj/
+*.xcworkspace/
+.DS_Store

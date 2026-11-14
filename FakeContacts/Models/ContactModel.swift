@@ -1,6 +1,7 @@
 import Foundation
 import Contacts
 import UIKit
+import AudioToolbox
 
 // MARK: - Contact
 struct Contact: Identifiable {
@@ -61,9 +62,14 @@ class TrickEngine: ObservableObject {
     @Published var forcedContacts: [ForcedContact] = []
     @Published var searchTriggerDigits: Int = 4
 
-    // Last opened — session only, not persisted
+    // Last opened — persisted across launches so the volume-button peek
+    // keeps working even after the app is killed and reopened.
     @Published var lastOpenedName: String = ""
     @Published var lastOpenedPhone: String = ""
+
+    // Sound / haptic settings for the peek trick
+    @Published var peekSoundEnabled: Bool = true
+    @Published var peekHapticEnabled: Bool = true
 
     init() { load() }
 
@@ -92,6 +98,10 @@ class TrickEngine: ObservableObject {
         d.set(minSeconds,          forKey: "trickMinSeconds")
         d.set(searchTrickArmed,    forKey: "searchTrickArmed")
         d.set(searchTriggerDigits, forKey: "searchTriggerDigits")
+        d.set(lastOpenedName,      forKey: "lastOpenedName")
+        d.set(lastOpenedPhone,     forKey: "lastOpenedPhone")
+        d.set(peekSoundEnabled,    forKey: "peekSoundEnabled")
+        d.set(peekHapticEnabled,   forKey: "peekHapticEnabled")
         if let data = try? JSONEncoder().encode(profiles) { d.set(data, forKey: "trickProfiles") }
         if let data = try? JSONEncoder().encode(forcedContacts) { d.set(data, forKey: "forcedContacts") }
     }
@@ -103,10 +113,34 @@ class TrickEngine: ObservableObject {
         minSeconds          = d.object(forKey: "trickMinSeconds") as? Double ?? 14
         searchTrickArmed    = d.bool(forKey: "searchTrickArmed")
         searchTriggerDigits = d.object(forKey: "searchTriggerDigits") as? Int ?? 4
+        lastOpenedName      = d.string(forKey: "lastOpenedName") ?? ""
+        lastOpenedPhone     = d.string(forKey: "lastOpenedPhone") ?? ""
+        peekSoundEnabled    = d.object(forKey: "peekSoundEnabled") as? Bool ?? true
+        peekHapticEnabled   = d.object(forKey: "peekHapticEnabled") as? Bool ?? true
         if let data = d.data(forKey: "trickProfiles"),
            let decoded = try? JSONDecoder().decode([TrickProfile].self, from: data) { profiles = decoded }
         if let data = d.data(forKey: "forcedContacts"),
            let decoded = try? JSONDecoder().decode([ForcedContact].self, from: data) { forcedContacts = decoded }
+    }
+
+    // MARK: - Last opened contact (peek)
+    /// Call whenever a contact detail is opened. Persists the contact so the
+    /// volume-button peek can recall it later — even after a relaunch.
+    func markLastOpened(_ contact: Contact, phone: String) {
+        lastOpenedName = contact.name
+        lastOpenedPhone = phone.filter { $0.isNumber }
+        save()
+    }
+
+    /// Trigger the peek feedback (sound + haptic) according to settings.
+    func triggerPeekFeedback() {
+        if peekHapticEnabled {
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        }
+        if peekSoundEnabled {
+            AudioServicesPlaySystemSound(1104) // subtle click
+        }
     }
 }
 

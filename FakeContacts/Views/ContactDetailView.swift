@@ -65,15 +65,25 @@ struct AvatarView: View {
                 .scaledToFill()
                 .frame(width: size, height: size)
                 .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.25), lineWidth: 2)
+                )
+                .shadow(radius: 8)
         } else {
             ZStack {
                 Circle()
                     .fill(Color(hex: "a2a8b4"))
                     .frame(width: size, height: size)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
+                    )
                 Text(initials)
                     .font(.system(size: size * 0.38, weight: .semibold))
                     .foregroundColor(.white)
             }
+            .shadow(radius: 6)
         }
     }
 
@@ -115,6 +125,16 @@ struct ContactDetailView: View {
             let topInset = geo.safeAreaInsets.top
 
             ZStack(alignment: .top) {
+                // iOS 26 glass background
+                if #available(iOS 26.0, *) {
+                    Color(.systemGroupedBackground)
+                        .glassEffect()
+                        .ignoresSafeArea()
+                } else {
+                    Color.black
+                        .ignoresSafeArea()
+                }
+
                 backgroundColor
                     .frame(height: topInset + 200)
                     .ignoresSafeArea()
@@ -132,7 +152,7 @@ struct ContactDetailView: View {
                             )
 
                             VStack(spacing: 0) {
-                                Spacer().frame(height: topInset - 10)
+                                Spacer().frame(height: max(topInset, 10))
 
                                 AvatarView(contact: contact, size: hasPhoto ? 270 : 110)
                                     .padding(.bottom, 14)
@@ -159,12 +179,12 @@ struct ContactDetailView: View {
                         // ── DATA ZONE ────────────────────────────────
                         VStack(spacing: 10) {
 
-                            DataCard {
+                            GlassCard {
                                 HStack(spacing: 12) {
                                     AvatarView(contact: contact, size: 40)
                                     Text("Contact Photo & Poster")
                                         .font(.system(size: 17.7))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.primary)
                                     Spacer()
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 13.5, weight: .semibold))
@@ -174,7 +194,7 @@ struct ContactDetailView: View {
                             }
 
                             if !snapshotPhone.isEmpty {
-                                DataCard {
+                                GlassCard {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("mobile")
                                             .font(.system(size: 13.5))
@@ -188,11 +208,11 @@ struct ContactDetailView: View {
                                 }
                             }
 
-                            DataCard {
+                            GlassCard {
                                 HStack {
                                     Text("FaceTime")
                                         .font(.system(size: 17.7))
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.primary)
                                     Spacer()
                                     HStack(spacing: 10) {
                                         FaceTimeBtn(icon: "video.fill")
@@ -203,7 +223,7 @@ struct ContactDetailView: View {
                             }
 
                             if !snapshotEmail.isEmpty {
-                                DataCard {
+                                GlassCard {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("email")
                                             .font(.system(size: 13.5))
@@ -218,7 +238,7 @@ struct ContactDetailView: View {
                             }
 
                             if !snapshotBirthday.isEmpty {
-                                DataCard {
+                                GlassCard {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("birthday")
                                             .font(.system(size: 13.5))
@@ -232,7 +252,7 @@ struct ContactDetailView: View {
                                 }
                             }
 
-                            DataCard {
+                            GlassCard {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Notes")
                                         .font(.system(size: 13.5))
@@ -240,14 +260,14 @@ struct ContactDetailView: View {
                                     if !snapshotNote.isEmpty {
                                         Text(snapshotNote)
                                             .font(.system(size: 17.7))
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.primary)
                                     }
                                 }
                                 .frame(maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
                                 .padding(.vertical, 10)
                             }
 
-                            DataCard {
+                            GlassCard {
                                 VStack(spacing: 0) {
                                     BottomRow(label: "Send Message",      color: .blue)
                                     Divider().background(Color(.systemGray5))
@@ -257,42 +277,40 @@ struct ContactDetailView: View {
                                 }
                             }
 
-                            DataCard { BottomRow(label: "Add to Emergency Contacts", color: .blue) }
-                            DataCard { BottomRow(label: "Share my Location", color: .blue) }
+                            GlassCard { BottomRow(label: "Add to Emergency Contacts", color: .blue) }
+                            GlassCard { BottomRow(label: "Share my Location", color: .blue) }
 
                             Spacer().frame(height: 40)
                         }
                         .padding(.top, 12)
-                        .background(Color.black)
                     }
                 }
                 .ignoresSafeArea(edges: .top)
             }
-            .background(Color.black)
         }
+        .background(Color.black)
         .navigationBarBackButtonHidden(true)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        // Visible glass toolbar background so back/edit icons render clearly
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: { dismiss() }) {
-                    ZStack {
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .frame(width: 32, height: 32)
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(10)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
                 }
-                .padding(.leading, 4)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Text("Edit")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
-                    .frame(width: 60, height: 30)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                     .background(.ultraThinMaterial)
                     .clipShape(Capsule())
             }
@@ -313,10 +331,9 @@ struct ContactDetailView: View {
                 snapshotBirthday = profile?.fakeBirthday.isEmpty == false ? profile!.fakeBirthday : contact.birthday
                 startTimer()
             }
-            // Save for volume-button trick
-            trickEngine.lastOpenedName  = contact.name
-            trickEngine.lastOpenedPhone = snapshotPhone.filter { $0.isNumber }
-            
+            // Save for volume-button trick (persisted across launches)
+            trickEngine.markLastOpened(contact, phone: snapshotPhone)
+
             // Calculate background color once
             if hasPhoto {
                 backgroundColor = contact.thumbnailImage?.dominantColor ?? Color(hex: "4f5054")
@@ -377,18 +394,6 @@ struct FaceTimeBtn: View {
                     .font(.system(size: 15))
                     .foregroundColor(.blue)
             )
-    }
-}
-
-// MARK: - Data Card
-struct DataCard<Content: View>: View {
-    @ViewBuilder let content: Content
-    var body: some View {
-        content
-            .padding(.horizontal, 14)
-            .background(Color(hex: "1c1c1e"))
-            .cornerRadius(10)
-            .padding(.horizontal, 6)
     }
 }
 

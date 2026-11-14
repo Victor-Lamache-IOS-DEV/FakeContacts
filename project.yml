@@ -2,7 +2,8 @@ name: FakeContacts
 options:
   bundleIdPrefix: com.victorlamache
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "26.0"
+  swiftVersion: "5.9"
 
 targets:
   FakeContacts:
@@ -31,3 +32,4 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     dependencies:
       - sdk: MediaPlayer.framework
+      - sdk: AudioToolbox.framework

@@ -35,7 +35,6 @@ func phoneBinding(_ text: Binding<String>, maxDigits: Int) -> Binding<String> {
     )
 }
 
-
 // MARK: - Config View
 struct ConfigView: View {
     @EnvironmentObject var trickEngine: TrickEngine
@@ -43,104 +42,131 @@ struct ConfigView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            ZStack {
+                if #available(iOS 26.0, *) {
+                    Color(.systemGroupedBackground)
+                        .glassEffect()
+                        .ignoresSafeArea()
+                } else {
+                    Color(.systemBackground)
+                        .ignoresSafeArea()
+                }
 
-                // ── TRICK 1: Timer ───────────────────────────────────
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Minimum time on page")
-                            Spacer()
-                            Text(trickEngine.minSeconds == 0 ? "Instant" : "\(Int(trickEngine.minSeconds))s")
-                                .foregroundColor(trickEngine.minSeconds == 0 ? .secondary : .primary)
-                                .monospacedDigit()
+                Form {
+                    // ── TRICK 1: Timer ───────────────────────────────────
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Minimum time on page")
+                                Spacer()
+                                Text(trickEngine.minSeconds == 0 ? "Instant" : "\(Int(trickEngine.minSeconds))s")
+                                    .foregroundColor(trickEngine.minSeconds == 0 ? .secondary : .primary)
+                                    .monospacedDigit()
+                            }
+                            Slider(value: $trickEngine.minSeconds, in: 0...30, step: 1)
+                                .tint(.blue)
+                                .onChange(of: trickEngine.minSeconds) { _ in trickEngine.save() }
                         }
-                        Slider(value: $trickEngine.minSeconds, in: 0...30, step: 1)
-                            .tint(.blue)
-                            .onChange(of: trickEngine.minSeconds) { _ in trickEngine.save() }
+                        .padding(.vertical, 4)
+                    } header: {
+                        Text("Trick 1 — Number Force")
+                    } footer: {
+                        Text(trickEngine.minSeconds == 0
+                             ? "Sequence advances instantly as soon as the contact is opened."
+                             : "Contact must be open this long before the sequence advances.")
                     }
-                    .padding(.vertical, 4)
-                } header: {
-                    Text("Trick 1 — Number Force")
-                } footer: {
-                    Text(trickEngine.minSeconds == 0
-                         ? "Sequence advances instantly as soon as the contact is opened."
-                         : "Contact must be open this long before the sequence advances.")
-                }
 
-                // ── TRICK 1: Profiles ────────────────────────────────
-                Section {
-                    ForEach($trickEngine.profiles) { $profile in
-                        ProfileRowView(profile: $profile)
-                    }
-                    .onDelete { trickEngine.profiles.remove(atOffsets: $0); trickEngine.save() }
-                    .onMove   { trickEngine.profiles.move(fromOffsets: $0, toOffset: $1); trickEngine.save() }
+                    // ── TRICK 1: Profiles ────────────────────────────────
+                    Section {
+                        ForEach($trickEngine.profiles) { $profile in
+                            GlassPanel {
+                                ProfileRowView(profile: $profile)
+                            }
+                        }
+                        .onDelete { trickEngine.profiles.remove(atOffsets: $0); trickEngine.save() }
+                        .onMove   { trickEngine.profiles.move(fromOffsets: $0, toOffset: $1); trickEngine.save() }
 
-                    Button(action: {
-                        trickEngine.profiles.append(TrickProfile())
-                        trickEngine.save()
-                    }) {
-                        Label("Add Profile", systemImage: "plus.circle.fill")
-                    }
-                } header: {
-                    Text("Profiles — in order")
-                } footer: {
-                    Text("Each profile fires once per contact opened. Swipe to delete, drag to reorder.")
-                }
-
-                // ── TRICK 1: Status ──────────────────────────────────
-                Section {
-                    HStack {
-                        Text("Status")
-                        Spacer()
-                        Text(trickEngine.isArmed
-                             ? "Armed (\(trickEngine.currentIndex + 1)/\(trickEngine.profiles.count))"
-                             : "Disarmed")
-                            .foregroundColor(trickEngine.isArmed ? .red : .secondary)
-                    }
-                    if trickEngine.isArmed {
-                        Button("Reset Sequence", role: .destructive) {
-                            trickEngine.currentIndex = 0
+                        Button(action: {
+                            trickEngine.profiles.append(TrickProfile())
                             trickEngine.save()
+                        }) {
+                            Label("Add Profile", systemImage: "plus.circle.fill")
+                        }
+                    } header: {
+                        Text("Profiles — in order")
+                    } footer: {
+                        Text("Each profile fires once per contact opened. Swipe to delete, drag to reorder.")
+                    }
+
+                    // ── TRICK 1: Status ──────────────────────────────────
+                    Section {
+                        HStack {
+                            Text("Status")
+                            Spacer()
+                            Text(trickEngine.isArmed
+                                 ? "Armed (\(trickEngine.currentIndex + 1)/\(trickEngine.profiles.count))"
+                                 : "Disarmed")
+                                .foregroundColor(trickEngine.isArmed ? .red : .secondary)
+                        }
+                        if trickEngine.isArmed {
+                            Button("Reset Sequence", role: .destructive) {
+                                trickEngine.currentIndex = 0
+                                trickEngine.save()
+                            }
                         }
                     }
-                }
 
-                // ── TRICK 2: Settings ────────────────────────────────
-                Section {
-                    Toggle("Armed", isOn: $trickEngine.searchTrickArmed)
-                        .onChange(of: trickEngine.searchTrickArmed) { _ in trickEngine.save() }
+                    // ── TRICK 2: Settings ────────────────────────────────
+                    Section {
+                        Toggle("Armed", isOn: $trickEngine.searchTrickArmed)
+                            .onChange(of: trickEngine.searchTrickArmed) { _ in trickEngine.save() }
 
-                    Stepper(
-                        "Trigger after \(trickEngine.searchTriggerDigits) digit\(trickEngine.searchTriggerDigits > 1 ? "s" : "")",
-                        value: $trickEngine.searchTriggerDigits, in: 1...8
-                    )
-                    .onChange(of: trickEngine.searchTriggerDigits) { _ in trickEngine.save() }
-                } header: {
-                    Text("Trick 2 — Name Force")
-                } footer: {
-                    Text("When armed, fake contacts appear mixed in during search. At the trigger digit count, only fake contacts are shown.")
-                }
-
-                // ── TRICK 2: Forced Contacts ─────────────────────────
-                Section {
-                    ForEach($trickEngine.forcedContacts) { $fc in
-                        ForcedContactRowView(fc: $fc)
+                        Stepper(
+                            "Trigger after \(trickEngine.searchTriggerDigits) digit\(trickEngine.searchTriggerDigits > 1 ? "s" : "")",
+                            value: $trickEngine.searchTriggerDigits, in: 1...8
+                        )
+                        .onChange(of: trickEngine.searchTriggerDigits) { _ in trickEngine.save() }
+                    } header: {
+                        Text("Trick 2 — Name Force")
+                    } footer: {
+                        Text("When armed, fake contacts appear mixed in during search. At the trigger digit count, only fake contacts are shown.")
                     }
-                    .onDelete { trickEngine.forcedContacts.remove(atOffsets: $0); trickEngine.save() }
-                    .onMove   { trickEngine.forcedContacts.move(fromOffsets: $0, toOffset: $1); trickEngine.save() }
 
-                    Button(action: {
-                        trickEngine.forcedContacts.append(ForcedContact())
-                        trickEngine.save()
-                    }) {
-                        Label("Add Forced Contact", systemImage: "plus.circle.fill")
+                    // ── TRICK 2: Forced Contacts ─────────────────────────
+                    Section {
+                        ForEach($trickEngine.forcedContacts) { $fc in
+                            GlassPanel {
+                                ForcedContactRowView(fc: $fc)
+                            }
+                        }
+                        .onDelete { trickEngine.forcedContacts.remove(atOffsets: $0); trickEngine.save() }
+                        .onMove   { trickEngine.forcedContacts.move(fromOffsets: $0, toOffset: $1); trickEngine.save() }
+
+                        Button(action: {
+                            trickEngine.forcedContacts.append(ForcedContact())
+                            trickEngine.save()
+                        }) {
+                            Label("Add Forced Contact", systemImage: "plus.circle.fill")
+                        }
+                    } header: {
+                        Text("Forced Contacts")
+                    } footer: {
+                        Text("Suffix length auto-limited to \(max(1, 10 - trickEngine.searchTriggerDigits)) digits based on trigger setting.")
                     }
-                } header: {
-                    Text("Forced Contacts")
-                } footer: {
-                    Text("Suffix length auto-limited to \(max(1, 10 - trickEngine.searchTriggerDigits)) digits based on trigger setting.")
+
+                    // ── PEEK SETTINGS ────────────────────────────────────
+                    Section {
+                        Toggle("Play sound on peek", isOn: $trickEngine.peekSoundEnabled)
+                            .onChange(of: trickEngine.peekSoundEnabled) { _ in trickEngine.save() }
+                        Toggle("Haptic feedback on peek", isOn: $trickEngine.peekHapticEnabled)
+                            .onChange(of: trickEngine.peekHapticEnabled) { _ in trickEngine.save() }
+                    } header: {
+                        Text("Peek (volume button)")
+                    } footer: {
+                        Text("Press the volume-down button while viewing the list to recall the last opened contact — works even with the Ring/Silent switch on silent.")
+                    }
                 }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Setup")
             .navigationBarTitleDisplayMode(.inline)

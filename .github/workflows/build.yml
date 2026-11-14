@@ -1,4 +1,4 @@
-name: Build & Sign FakeContacts
+name: Build & Sign FakeContacts (iOS 26)
 
 on:
   push:
@@ -7,11 +7,24 @@ on:
 
 jobs:
   build:
+    # iOS 26 SDK requires Xcode 26. Use a macOS runner that ships with Xcode 26.
+    # If macos-latest does not yet have Xcode 26, switch to a self-hosted runner
+    # with Xcode 26 installed, or pin to the specific image (e.g. macos-26).
     runs-on: macos-latest
+
+    env:
+      APP_NAME: FakeContacts
+      SCHEME: FakeContacts
+      BUNDLE_ID: com.victorlamache.contactdev
+      PROFILE_NAME: "Victor Lamache Dev Profile"
+      PROFILE_UUID: d36ac767-de69-4307-9e3b-d15995a60f5d
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Install Apple Certificate and Provisioning Profile
         env:
@@ -20,39 +33,44 @@ jobs:
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
+          set -e
+
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
 
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # Create a dedicated keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          # Import certificate
+          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          # Install provisioning profile
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" "$PP_PATH")
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"${PROFILE_UUID}".mobileprovision
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"${{ env.PROFILE_UUID }}".mobileprovision
 
           echo "=== Decoded Profile Info ==="
-          security cms -D -i $PP_PATH > $RUNNER_TEMP/profile.plist
-          /usr/libexec/PlistBuddy -c "Print Name" $RUNNER_TEMP/profile.plist || true
-          /usr/libexec/PlistBuddy -c "Print UUID" $RUNNER_TEMP/profile.plist || true
-          /usr/libexec/PlistBuddy -c "Print TeamIdentifier" $RUNNER_TEMP/profile.plist || true
-          /usr/libexec/PlistBuddy -c "Print Entitlements:application-identifier" $RUNNER_TEMP/profile.plist || true
-
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" $RUNNER_TEMP/profile.plist)
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/d36ac767-de69-4307-9e3b-d15995a60f5d.mobileprovision
+          security cms -D -i "$PP_PATH" > "$RUNNER_TEMP/profile.plist"
+          /usr/libexec/PlistBuddy -c "Print Name" "$RUNNER_TEMP/profile.plist" || true
+          /usr/libexec/PlistBuddy -c "Print UUID" "$RUNNER_TEMP/profile.plist" || true
+          /usr/libexec/PlistBuddy -c "Print TeamIdentifier" "$RUNNER_TEMP/profile.plist" || true
+          /usr/libexec/PlistBuddy -c "Print Entitlements:application-identifier" "$RUNNER_TEMP/profile.plist" || true
 
           echo "=== Installed Provisioning Profiles ==="
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
 
           echo "=== Codesigning Identities ==="
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -60,24 +78,32 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build FakeContacts
+      - name: Build & Archive FakeContacts
         run: |
+          set -e
           xcodebuild \
-            -scheme FakeContacts \
+            -scheme "$SCHEME" \
             -sdk iphoneos \
             -configuration Release \
             -destination "generic/platform=iOS" \
-            -archivePath $PWD/build/FakeContacts.xcarchive \
+            -archivePath "$PWD/build/$APP_NAME.xcarchive" \
             clean archive
 
+      - name: Export IPA
+        run: |
+          set -e
           xcodebuild -exportArchive \
-            -archivePath $PWD/build/FakeContacts.xcarchive \
+            -archivePath "$PWD/build/$APP_NAME.xcarchive" \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath $PWD/build/output-contacts
-          mv $PWD/build/output-contacts/*.ipa $PWD/build/output-contacts/FakeContacts.ipa
+            -exportPath "$PWD/build/output"
+
+          # Rename the exported IPA for clarity
+          ls "$PWD/build/output"/*.ipa
+          mv "$PWD/build/output"/*.ipa "$PWD/build/output/${APP_NAME}.ipa"
 
       - name: Upload FakeContacts IPA
         uses: actions/upload-artifact@v4
         with:
-          name: FakeContacts
-          path: build/output-contacts/FakeContacts.ipa
+          name: FakeContacts-iOS26
+          path: build/output/FakeContacts.ipa
+          retention-days: 30

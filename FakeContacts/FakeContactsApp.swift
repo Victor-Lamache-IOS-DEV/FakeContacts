@@ -9,6 +9,14 @@ struct FakeContactsApp: App {
             ContactsListView()
                 .environmentObject(trickEngine)
                 .preferredColorScheme(.dark)
+                // iOS 26 glass window background
+                .background {
+                    if #available(iOS 26.0, *) {
+                        Color(.systemGroupedBackground).glassEffect()
+                    } else {
+                        Color(.systemBackground)
+                    }
+                }
         }
     }
 }

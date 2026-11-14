@@ -224,6 +224,7 @@ struct ContactsListView: View {
     @StateObject private var store = ContactStore()
     @StateObject private var volumeObserver = VolumeObserver()
     @State private var searchText = ""
+    @State private var peekName: String? = nil
     @FocusState private var searchFocused: Bool
 
     var searchDigits: String { searchText.filter { $0.isNumber } }
@@ -295,8 +296,9 @@ struct ContactsListView: View {
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(Color.white.opacity(0.55))
 
-            TextField("", text: $searchText, prompt: Text("Search")
-                    .foregroundColor(Color.white.opacity(0.5)))
+            TextField("", text: $searchText, prompt: peekName != nil ? Text(peekName!)
+                        .foregroundColor(Color.white.opacity(0.5)) : Text("Search")
+                        .foregroundColor(Color.white.opacity(0.5)))
                 .font(.system(size: 17))
                 .foregroundStyle(.white)
                 .tint(.blue)
@@ -344,16 +346,21 @@ struct ContactsListView: View {
     }
 
     // MARK: - Peek (volume button)
+    // Affiche le nom du dernier contact dans la barre de recherche pendant 3 s,
+    // SANS modifier searchText ni filtrer la liste. Le nom disparaît tout seul.
     private func performPeek() {
         let name = trickEngine.lastOpenedName
         guard !name.isEmpty else {
             let gen = UINotificationFeedbackGenerator(); gen.notificationOccurred(.warning); return
         }
         trickEngine.triggerPeekFeedback()
-        // Affiche le nom dans la barre de recherche pendant 3 s, sans filtrer.
-        searchText = name
+
+        // Affiche le nom dans le champ de recherche de façon provisoire.
+        // On n'écrit PAS dans searchText pour ne pas déclencher le filtre.
+        peekName = name
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            if searchText == name { searchText = "" }
+            if peekName == name { peekName = nil }
         }
     }
 }

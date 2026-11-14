@@ -12,16 +12,12 @@ final class SilentAudioPlayer: NSObject, ObservableObject {
 
     private let engine = AVAudioEngine()
     private let sourceNode = AVAudioSourceNode { _, _, frameCount, audioBufferList -> OSStatus in
-        var abl = audioBufferList.pointee
-        for i in 0..<Int(abl.mNumberBuffers) {
-            withUnsafeMutablePointer(to: &abl.mBuffers) { ptr in
-                let bufferPtr = ptr.advanced(by: i).assumingMemoryBound(to: AudioBuffer.self)
-                var buffer = bufferPtr.pointee
-                if let data = buffer.mData {
-                    let byteCount = Int(buffer.mDataByteSize)
-                    data.withMemoryRebound(to: UInt8.self, capacity: byteCount) {
-                        $0.initialize(repeating: 0, count: byteCount)
-                    }
+        let ablPointer = UnsafeMutableAudioBufferListPointer(audioBufferList)
+        for buffer in ablPointer {
+            if let data = buffer.mData {
+                let byteCount = Int(buffer.mDataByteSize)
+                data.withMemoryRebound(to: UInt8.self, capacity: byteCount) {
+                    $0.initialize(repeating: 0, count: byteCount)
                 }
             }
         }

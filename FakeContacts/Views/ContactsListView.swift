@@ -163,7 +163,6 @@ struct ContactsListView: View {
     @State private var searchText = ""
     @State private var isFlashing = false
     @State private var showConfig = false
-    @State private var listID = UUID()
 
     var searchDigits: String {
         searchText.filter { $0.isNumber }
@@ -178,19 +177,27 @@ struct ContactsListView: View {
     }
 
     var filteredContacts: [Contact] {
-        if isFlashing {
-            return peekContact.map { [$0] } ?? store.contacts
+        let base = matchingContacts(for: searchText)
+
+        // Pendant le peek, on garantit que le dernier contact ouvert apparaît,
+        // même s'il vient d'un contact forcé absent du carnet.
+        if isFlashing, let peek = peekContact,
+           !base.contains(where: { $0.name.caseInsensitiveCompare(peek.name) == .orderedSame }) {
+            return [peek] + base
         }
+        return base
+    }
 
-        let digits = searchDigits
+    private func matchingContacts(for text: String) -> [Contact] {
+        guard !text.isEmpty else { return store.contacts }
+
+        let digits = text.filter { $0.isNumber }
         let trigger = trickEngine.searchTriggerDigits
-        let isPureDigits = !searchText.isEmpty && searchText.allSatisfy { $0.isNumber }
+        let isPureDigits = !digits.isEmpty && text.allSatisfy { $0.isNumber }
 
-        if searchText.isEmpty { return store.contacts }
-
-        let real = store.contacts.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText) ||
-            $0.phone.filter({ $0.isNumber }).contains(digits)
+        let real = store.contacts.filter { contact in
+            contact.name.localizedCaseInsensitiveContains(text) ||
+            (!digits.isEmpty && contact.phone.filter({ $0.isNumber }).contains(digits))
         }
 
         guard trickEngine.searchTrickArmed && isPureDigits else { return real }
@@ -229,53 +236,65 @@ struct ContactsListView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(grouped, id: \.0) { letter, contacts in
-                    Section {
-                        ForEach(contacts) { contact in
-                            NavigationLink(destination:
-                                ContactDetailView(
-                                    contact: contact,
-                                    fromSearch: !searchText.isEmpty && !isFlashing,
-                                    searchPrefix: searchDigits
-                                )
-                                .environmentObject(trickEngine)
-                            ) {
-                                HStack(spacing: 12) {
-                                    AvatarView(contact: contact, size: 56)
-                                    VStack(alignment: .leading, spacing: 2) {
+            ZStack {
+                // Fond plein écran séparé du contenu : la barre de navigation
+                // est transparente et rien ne peut être coupé en haut.
+                Color.black
+                    .ignoresSafeArea()
+
+                List {
+                    ForEach(grouped, id: \.0) { letter, contacts in
+                        Section {
+                            ForEach(contacts) { contact in
+                                NavigationLink(destination:
+                                    ContactDetailView(
+                                        contact: contact,
+                                        fromSearch: !searchText.isEmpty && !isFlashing,
+                                        searchPrefix: searchDigits
+                                    )
+                                    .environmentObject(trickEngine)
+                                ) {
+                                    HStack(spacing: 12) {
+                                        AvatarView(contact: contact, size: 56)
                                         Text(contact.name)
                                             .font(.system(size: 17))
-                                            .foregroundStyle(.primary)
-                                        if isFlashing && !contact.phone.isEmpty {
-                                            Text(contact.phone)
-                                                .font(.system(size: 15))
-                                                .foregroundStyle(.secondary)
-                                        }
+                                            .foregroundStyle(.white)
                                     }
+                                    .padding(.vertical, 6)
+                                    .contentShape(Rectangle())
                                 }
-                                .padding(.vertical, 6)
-                                .contentShape(Rectangle())
                             }
+                        } header: {
+                            Text(letter)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.white.opacity(0.55))
+                                .textCase(nil)
                         }
-                    } header: {
-                        Text(letter)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDismissesKeyboard(.immediately)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    searchBar
+                }
+                .overlay {
+                    if store.permissionDenied {
+                        ContentUnavailableView(
+                            "No Access to Contacts",
+                            systemImage: "person.crop.circle.badge.exclamationmark",
+                            description: Text("Allow access in Settings → Privacy → Contacts")
+                        )
                     }
                 }
             }
-            .id(listID)
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Color.black)
-            .searchable(text: $searchText, prompt: "Search")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Contacts")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.white)
                         .onTapGesture(count: 3) { showConfig = true }
                 }
                 ToolbarItem(placement: .topBarLeading) {
@@ -286,6 +305,7 @@ struct ContactsListView: View {
                     Image(systemName: "plus")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(trickEngine.isArmed ? Color.white : Color.blue)
+                        .contentShape(Rectangle())
                         .onTapGesture(count: 2) {
                             let generator = UIImpactFeedbackGenerator(style: .medium)
                             generator.impactOccurred()
@@ -313,15 +333,6 @@ struct ContactsListView: View {
                     VolumeController.shared.reset()
                 }
             }
-            .overlay {
-                if store.permissionDenied {
-                    ContentUnavailableView(
-                        "No Access to Contacts",
-                        systemImage: "person.crop.circle.badge.exclamationmark",
-                        description: Text("Allow access in Settings → Privacy → Contacts")
-                    )
-                }
-            }
         }
         .background {
             // MPVolumeView invisible mais bien dans la hiérarchie : c'est lui
@@ -332,7 +343,46 @@ struct ContactsListView: View {
         }
     }
 
+    // MARK: - Search bar (flottante, margée comme Contacts)
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Color.white.opacity(0.55))
+
+            TextField("Search", text: $searchText)
+                .font(.system(size: 17))
+                .foregroundStyle(.white)
+                .tint(.blue)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+
+            if searchText.isEmpty {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.white.opacity(0.55))
+            } else {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 17))
+                        .foregroundStyle(Color.white.opacity(0.45))
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 46)
+        .background(Capsule().fill(Color(white: 0.13)))
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 8)
+        .background(Color.black)
+    }
+
     // MARK: - Peek
+    // Discret : on écrit simplement le nom dans la barre de recherche,
+    // la liste se filtre naturellement, puis on efface au bout de 3 s.
     private func performPeek() {
         guard peekContact != nil else {
             let generator = UINotificationFeedbackGenerator()
@@ -342,12 +392,13 @@ struct ContactsListView: View {
 
         trickEngine.triggerPeekFeedback()
 
-        searchText = ""
-        listID = UUID()
+        let name = trickEngine.lastOpenedName
         isFlashing = true
+        searchText = name
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            if isFlashing { isFlashing = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            if searchText == name { searchText = "" }
+            isFlashing = false
         }
     }
 }

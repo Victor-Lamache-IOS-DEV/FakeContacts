@@ -42,23 +42,44 @@ struct ContactAvatar: View {
         case .glass:
             ZStack {
                 Circle()
-                    .fill(.white.opacity(0.18))
-                Circle()
+                    .fill(.white.opacity(0.22))
                     .glassEffect(.regular, in: .circle)
+
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.32), .clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                    )
+
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.clear, .clear, Color.black.opacity(0.18)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
                 Circle()
                     .strokeBorder(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.7), Color.white.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            colors: [Color.white.opacity(0.85), .clear, Color.black.opacity(0.25)],
+                            startPoint: .top,
+                            endPoint: .bottom
                         ),
-                        lineWidth: 2
+                        lineWidth: 3
                     )
+
                 Text(initials)
                     .font(.system(size: size * 0.42, weight: .medium))
                     .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.4), radius: 8, y: 4)
+                    .shadow(color: .black.opacity(0.35), radius: 8, y: 4)
             }
+            .clipShape(Circle())
+            .shadow(color: .black.opacity(0.45), radius: 28, y: 14)
         }
     }
 }

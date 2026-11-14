@@ -16,9 +16,9 @@ struct AmbientBackground: View {
                 } else {
                     LinearGradient(
                         colors: [
-                            Color(red: 0.58, green: 0.62, blue: 0.65),
-                            Color(red: 0.36, green: 0.39, blue: 0.46),
-                            Color(red: 0.05, green: 0.05, blue: 0.09)
+                            Color(red: 0.44, green: 0.51, blue: 0.66),
+                            Color(red: 0.25, green: 0.28, blue: 0.45),
+                            Color(red: 0.08, green: 0.08, blue: 0.20)
                         ],
                         startPoint: .top,
                         endPoint: .bottom

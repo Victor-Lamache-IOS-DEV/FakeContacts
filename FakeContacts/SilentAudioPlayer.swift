@@ -1,4 +1,5 @@
 import Foundation
+import AVFAudio
 import AVFoundation
 
 // MARK: - Silent Audio Player
@@ -12,10 +13,15 @@ final class SilentAudioPlayer: NSObject, ObservableObject {
     static let shared = SilentAudioPlayer()
 
     private let engine = AVAudioEngine()
-    private let silentSource = AVAudioSourceNode { _, _, frameCount, audioBufferList, _ -> OSStatus in
-        let ablPointer = UnsafeMutableBufferPointer<Float>(audioBufferList!)
-        for buffer in ablPointer {
-            buffer.baseAddress?.initialize(repeating: 0, count: Int(frameCount))
+    private let silentSource = AVAudioSourceNode { _, _, frameCount, audioBufferList -> OSStatus in
+        let abl = UnsafeMutableAudioBufferListPointer(audioBufferList)
+        for buffer in abl {
+            if let data = buffer.mData {
+                let byteCount = Int(buffer.mDataByteSize)
+                data.withMemoryRebound(to: UInt8.self, capacity: byteCount) { ptr in
+                    ptr.initialize(repeating: 0, count: byteCount)
+                }
+            }
         }
         return noErr
     }

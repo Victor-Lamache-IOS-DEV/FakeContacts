@@ -65,7 +65,7 @@ struct ConfigView: View {
                             }
                             Slider(value: $trickEngine.minSeconds, in: 0...30, step: 1)
                                 .tint(.blue)
-                                .onChange(of: trickEngine.minSeconds) { _ in trickEngine.save() }
+                                .onChange(of: trickEngine.minSeconds) { _, _ in trickEngine.save() }
                         }
                         .padding(.vertical, 4)
                     } header: {
@@ -119,13 +119,13 @@ struct ConfigView: View {
                     // ── TRICK 2: Settings ────────────────────────────────
                     Section {
                         Toggle("Armed", isOn: $trickEngine.searchTrickArmed)
-                            .onChange(of: trickEngine.searchTrickArmed) { _ in trickEngine.save() }
+                            .onChange(of: trickEngine.searchTrickArmed) { _, _ in trickEngine.save() }
 
                         Stepper(
                             "Trigger after \(trickEngine.searchTriggerDigits) digit\(trickEngine.searchTriggerDigits > 1 ? "s" : "")",
                             value: $trickEngine.searchTriggerDigits, in: 1...8
                         )
-                        .onChange(of: trickEngine.searchTriggerDigits) { _ in trickEngine.save() }
+                        .onChange(of: trickEngine.searchTriggerDigits) { _, _ in trickEngine.save() }
                     } header: {
                         Text("Trick 2 — Name Force")
                     } footer: {
@@ -157,9 +157,9 @@ struct ConfigView: View {
                     // ── PEEK SETTINGS ────────────────────────────────────
                     Section {
                         Toggle("Play sound on peek", isOn: $trickEngine.peekSoundEnabled)
-                            .onChange(of: trickEngine.peekSoundEnabled) { _ in trickEngine.save() }
+                            .onChange(of: trickEngine.peekSoundEnabled) { _, _ in trickEngine.save() }
                         Toggle("Haptic feedback on peek", isOn: $trickEngine.peekHapticEnabled)
-                            .onChange(of: trickEngine.peekHapticEnabled) { _ in trickEngine.save() }
+                            .onChange(of: trickEngine.peekHapticEnabled) { _, _ in trickEngine.save() }
                     } header: {
                         Text("Peek (volume button)")
                     } footer: {

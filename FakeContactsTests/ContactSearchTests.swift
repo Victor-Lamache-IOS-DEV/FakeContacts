@@ -107,6 +107,42 @@ final class ContactSearchTests: XCTestCase {
         XCTAssertFalse(results.contains { $0.name == "Sarah" })
     }
 
+    func testForcedPhoneStartsWith06AndContainsTypedDigits() {
+        for _ in 0..<50 {
+            let number = TrickEngine.forcedPhoneNumber(typedDigits: "0787")
+
+            XCTAssertEqual(number.count, 10)
+            XCTAssertTrue(number.hasPrefix("06"))
+            XCTAssertTrue(number.contains("0787"))
+        }
+    }
+
+    func testForcedPhoneKeepsTyped06Prefix() {
+        let number = TrickEngine.forcedPhoneNumber(typedDigits: "0699")
+
+        XCTAssertEqual(number.count, 10)
+        XCTAssertTrue(number.hasPrefix("0699"))
+    }
+
+    func testForcedPhoneIsTenDigitsWithSuffix() {
+        let number = TrickEngine.forcedPhoneNumber(typedDigits: "0612", extraDigits: "345")
+
+        XCTAssertEqual(number.count, 10)
+        XCTAssertTrue(number.contains("0612345"))
+    }
+
+    func testForcedSearchContactNumberContainsTypedDigits() {
+        let engine = TrickEngine()
+        engine.forcedContacts = [ForcedContact(fakeName: "Sarah", phoneSuffix: "")]
+
+        let contacts = engine.forcedSearchContacts(matchingDigits: "0787")
+
+        let phone = contacts.first?.primaryPhone?.value ?? ""
+        XCTAssertEqual(phone.count, 10)
+        XCTAssertTrue(phone.hasPrefix("06"))
+        XCTAssertTrue(phone.contains("0787"))
+    }
+
     func testArmedBelowTriggerLengthMixesRealAndForcedContacts() {
         let results = ContactSearch.results(
             contacts: [alice, bob],

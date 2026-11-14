@@ -129,6 +129,20 @@ final class TrickEngine: ObservableObject {
 
     // MARK: Forced search contacts
 
+    /// Builds a 10-digit mobile number that always starts with 06 and contains
+    /// the digits typed by the spectator, padded with random digits.
+    static func forcedPhoneNumber(typedDigits: String, extraDigits: String = "") -> String {
+        let typed = String(typedDigits.filter(\.isNumber).prefix(10))
+        var base = typed.hasPrefix("06") ? typed : "06" + typed
+        base += extraDigits.filter(\.isNumber)
+
+        var digits = Array(base.prefix(10))
+        while digits.count < 10 {
+            digits.append(Character(String(Int.random(in: 0...9))))
+        }
+        return String(digits)
+    }
+
     func forcedSearchContacts(matchingDigits digits: String) -> [Contact] {
         let safeDigits = digits.filter(\.isNumber)
 
@@ -137,10 +151,8 @@ final class TrickEngine: ObservableObject {
             guard !name.isEmpty else { return nil }
 
             let suffix = forced.phoneSuffix.filter(\.isNumber)
-            let phoneValue = safeDigits + String(suffix.prefix(max(0, 10 - safeDigits.count)))
-            let phones = phoneValue.isEmpty
-                ? []
-                : [ContactField(label: "mobile", value: phoneValue)]
+            let phoneValue = Self.forcedPhoneNumber(typedDigits: safeDigits, extraDigits: suffix)
+            let phones = [ContactField(label: "mobile", value: phoneValue)]
 
             let emailValue = forced.fakeEmail.trimmingCharacters(in: .whitespacesAndNewlines)
             let emails = emailValue.isEmpty

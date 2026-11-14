@@ -140,7 +140,7 @@ struct ContactsScreen: View {
                                 NavigationLink {
                                     ContactDetailScreen(contact: contact)
                                 } label: {
-                                    ContactRow(contact: contact, phone: isSearching ? contact.primaryPhone?.value : nil)
+                                    ContactRow(contact: contact, phone: showsPhoneInResults ? contact.primaryPhone?.value : nil)
                                 }
                                 .buttonStyle(.plain)
                                 .simultaneousGesture(TapGesture().onEnded {
@@ -372,6 +372,11 @@ struct ContactsScreen: View {
     }
 
     // MARK: - Search and sections
+
+    private var showsPhoneInResults: Bool {
+        guard isSearching else { return false }
+        return searchText.rangeOfCharacter(from: .letters) != nil
+    }
 
     private var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

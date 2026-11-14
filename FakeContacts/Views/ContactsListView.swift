@@ -242,7 +242,7 @@ struct ContactsListView: View {
                                     .environmentObject(trickEngine)
                                 ) {
                                     HStack(spacing: 12) {
-                                        AvatarView(contact: contact, size: 40)
+                                        AvatarView(contact: contact, size: 36)
 
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(contact.name)
@@ -259,9 +259,11 @@ struct ContactsListView: View {
                                             }
                                         }
                                     }
-                                    .padding(.vertical, 3)
+                                    // Toute la largeur de la bande est cliquable.
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .contentShape(Rectangle())
                                 }
+                                .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
                                 .simultaneousGesture(TapGesture().onEnded {
                                     endSearchInteraction()
                                 })

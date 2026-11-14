@@ -60,7 +60,7 @@ struct AvatarView: View {
         } else {
             ZStack {
                 Circle()
-                    .fill(Color(hex: "a2a8b4"))
+                    .fill(avatarColor)
                     .frame(width: size, height: size)
                 Text(initials)
                     .font(.system(size: size * 0.38, weight: .semibold))
@@ -73,6 +73,16 @@ struct AvatarView: View {
         contact.name.split(separator: " ").prefix(2)
             .compactMap { $0.first.map(String.init) }
             .joined()
+    }
+
+    // Couleur stable (pas de hashValue, qui change à chaque lancement).
+    private var avatarColor: Color {
+        let palette: [Color] = [
+            Color(hex: "7A7A8C"), Color(hex: "8E7CC3"), Color(hex: "7C9EC3"),
+            Color(hex: "C3877C"), Color(hex: "7CC3A1"), Color(hex: "C3B07C")
+        ]
+        let sum = contact.name.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return palette[sum % palette.count]
     }
 }
 
@@ -103,191 +113,180 @@ struct ContactDetailView: View {
     var hasPhoto: Bool { contact.thumbnailImage != nil }
 
     var body: some View {
-        GeometryReader { geo in
-            let topInset = geo.safeAreaInsets.top
+        ScrollView {
+            VStack(spacing: 0) {
 
-            ZStack(alignment: .top) {
-                Color.black
-                    .ignoresSafeArea()
+                // ── HEADER ──────────────────────────────────
+                // Hauteur naturelle : plus de frame fixe, donc plus de
+                // contenu rogné ni de bande vide sous les boutons.
+                VStack(spacing: 0) {
+                    AvatarView(contact: contact, size: hasPhoto ? 250 : 110)
+                        .padding(.top, 16)
+                        .padding(.bottom, 14)
 
-                backgroundColor
-                    .frame(height: topInset + 200)
-                    .ignoresSafeArea()
-                    .frame(maxHeight: .infinity, alignment: .top)
+                    Text(contact.name)
+                        .font(.system(size: hasPhoto ? 34 : 28, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
 
-                ScrollView {
-                    VStack(spacing: 0) {
+                    HStack(spacing: 22) {
+                        ActionBtn(icon: "message.fill")
+                        ActionBtn(icon: "phone.fill")
+                        ActionBtn(icon: "video.fill")
+                        ActionBtn(icon: "envelope.fill", dimmed: true)
+                    }
+                    .padding(.bottom, 26)
+                }
+                .frame(maxWidth: .infinity)
+                .background {
+                    // Le fond remonte sous la barre de navigation et la
+                    // barre d'état : plus aucune couture visible.
+                    headerBackground
+                        .ignoresSafeArea(edges: .top)
+                }
 
-                        // ── HEADER ──────────────────────────────────
-                        ZStack(alignment: .bottom) {
-                            LinearGradient(
-                                colors: [backgroundColor, Color(hex: "272a33")],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
+                // ── DATA ZONE ────────────────────────────────
+                VStack(spacing: 10) {
 
-                            VStack(spacing: 0) {
-                                Spacer().frame(height: max(topInset, 10))
-
-                                AvatarView(contact: contact, size: hasPhoto ? 270 : 110)
-                                    .padding(.bottom, 14)
-
-                                Text(contact.name)
-                                    .font(.system(size: hasPhoto ? 34 : 28, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 20)
-                                    .padding(.bottom, 20)
-
-                                HStack(spacing: 10) {
-                                    ActionBtn(icon: "message.fill", label: "message")
-                                    ActionBtn(icon: "phone.fill",   label: "call")
-                                    ActionBtn(icon: "video.fill",   label: "video")
-                                    ActionBtn(icon: "envelope.fill", label: "mail", dimmed: true)
-                                }
-                                .padding(.horizontal, 8)
-                                .padding(.bottom, 24)
-                            }
+                    DataCard {
+                        HStack(spacing: 12) {
+                            AvatarView(contact: contact, size: 40)
+                            Text("Contact Photo & Poster")
+                                .font(.system(size: 17.7))
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13.5, weight: .semibold))
+                                .foregroundColor(Color(.systemGray3))
                         }
-                        .frame(height: hasPhoto ? topInset + 430 : topInset + 250)
+                        .padding(.vertical, 10)
+                    }
 
-                        // ── DATA ZONE ────────────────────────────────
-                        VStack(spacing: 10) {
-
-                            DataCard {
-                                HStack(spacing: 12) {
-                                    AvatarView(contact: contact, size: 40)
-                                    Text("Contact Photo & Poster")
-                                        .font(.system(size: 17.7))
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 13.5, weight: .semibold))
-                                        .foregroundColor(Color(.systemGray3))
-                                }
-                                .padding(.vertical, 10)
-                            }
-
+                    // Téléphone + Notes groupés dans une seule carte (comme Contacts)
+                    DataCard {
+                        VStack(alignment: .leading, spacing: 0) {
                             if !snapshotPhone.isEmpty {
-                                DataCard {
+                                HStack {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("mobile")
+                                        Text("phone")
                                             .font(.system(size: 13.5))
                                             .foregroundColor(.secondary)
                                         Text(snapshotPhone)
                                             .font(.system(size: 17.7))
                                             .foregroundColor(.blue)
                                     }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 10)
+                                    Spacer()
+                                    Image(systemName: "phone.fill")
+                                        .font(.system(size: 17))
+                                        .foregroundColor(.blue)
                                 }
+                                .padding(.vertical, 12)
+                                Divider()
                             }
 
-                            DataCard {
-                                HStack {
-                                    Text("FaceTime")
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Notes")
+                                    .font(.system(size: 13.5))
+                                    .foregroundColor(.secondary)
+                                if !snapshotNote.isEmpty {
+                                    Text(snapshotNote)
                                         .font(.system(size: 17.7))
                                         .foregroundColor(.primary)
-                                    Spacer()
-                                    HStack(spacing: 10) {
-                                        FaceTimeBtn(icon: "video.fill")
-                                        FaceTimeBtn(icon: "phone.fill")
-                                    }
-                                }
-                                .padding(.vertical, 16)
-                            }
-
-                            if !snapshotEmail.isEmpty {
-                                DataCard {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("email")
-                                            .font(.system(size: 13.5))
-                                            .foregroundColor(.secondary)
-                                        Text(snapshotEmail)
-                                            .font(.system(size: 17.7))
-                                            .foregroundColor(.blue)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 10)
                                 }
                             }
+                            .frame(maxWidth: .infinity, minHeight: 70, alignment: .topLeading)
+                            .padding(.vertical, 12)
+                        }
+                    }
 
-                            if !snapshotBirthday.isEmpty {
-                                DataCard {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("birthday")
-                                            .font(.system(size: 13.5))
-                                            .foregroundColor(.secondary)
-                                        Text(snapshotBirthday)
-                                            .font(.system(size: 17.7))
-                                            .foregroundColor(.white)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 10)
-                                }
-                            }
-
-                            DataCard {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("Notes")
+                    if !snapshotEmail.isEmpty {
+                        DataCard {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("email")
                                         .font(.system(size: 13.5))
                                         .foregroundColor(.secondary)
-                                    if !snapshotNote.isEmpty {
-                                        Text(snapshotNote)
-                                            .font(.system(size: 17.7))
-                                            .foregroundColor(.primary)
-                                    }
+                                    Text(snapshotEmail)
+                                        .font(.system(size: 17.7))
+                                        .foregroundColor(.blue)
                                 }
-                                .frame(maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
-                                .padding(.vertical, 10)
+                                Spacer()
+                                Image(systemName: "envelope.fill")
+                                    .font(.system(size: 17))
+                                    .foregroundColor(.blue)
                             }
-
-                            DataCard {
-                                VStack(spacing: 0) {
-                                    BottomRow(label: "Send Message",      color: .blue)
-                                    Divider().background(Color(.systemGray5))
-                                    BottomRow(label: "Share Contact",     color: .blue)
-                                    Divider().background(Color(.systemGray5))
-                                    BottomRow(label: "Add to Favourites", color: .blue)
-                                }
-                            }
-
-                            DataCard { BottomRow(label: "Add to Emergency Contacts", color: .blue) }
-                            DataCard { BottomRow(label: "Share my Location", color: .blue) }
-
-                            Spacer().frame(height: 40)
+                            .padding(.vertical, 10)
                         }
-                        .padding(.top, 12)
                     }
+
+                    if !snapshotBirthday.isEmpty {
+                        DataCard {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("birthday")
+                                    .font(.system(size: 13.5))
+                                    .foregroundColor(.secondary)
+                                Text(snapshotBirthday)
+                                    .font(.system(size: 17.7))
+                                    .foregroundColor(.primary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 10)
+                        }
+                    }
+
+                    DataCard {
+                        VStack(spacing: 0) {
+                            BottomRow(label: "Send Message",      color: .blue)
+                            Divider().background(Color(.systemGray5))
+                            BottomRow(label: "Share Contact",     color: .blue)
+                            Divider().background(Color(.systemGray5))
+                            BottomRow(label: "Add to Favourites", color: .blue)
+                        }
+                    }
+
+                    DataCard { BottomRow(label: "Add to Emergency Contacts", color: .blue) }
+                    DataCard { BottomRow(label: "Share my Location", color: .blue) }
+
+                    Spacer().frame(height: 40)
                 }
-                .ignoresSafeArea(edges: .top)
+                .padding(.top, 14)
+                .background(Color.black)
             }
         }
-        .background(Color.black)
+        .background(Color.black.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        // Barre d'outils native avec fond matériel pour que les icônes soient lisibles
-        .toolbarBackground(.regularMaterial, for: .navigationBar)
+        // Barre transparente : le header passe dessous, sans raccord.
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .topBarLeading) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.blue)
-                        .padding(8)
-                        .background(.regularMaterial)
-                        .clipShape(Circle())
+                        .foregroundStyle(.white)
+                        .frame(width: 42, height: 42)
+                        .background {
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .overlay(Circle().fill(Color.black.opacity(0.25)))
+                        }
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Text("Edit")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.blue)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.regularMaterial)
-                    .clipShape(Capsule())
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .background {
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                            .overlay(Capsule().fill(Color.black.opacity(0.25)))
+                    }
             }
         }
         .onAppear {
@@ -306,7 +305,7 @@ struct ContactDetailView: View {
                 snapshotBirthday = profile?.fakeBirthday.isEmpty == false ? profile!.fakeBirthday : contact.birthday
                 startTimer()
             }
-            // Sauvegarde pour le peek bouton volume (persisté d'un lancement à l'autre)
+            // Sauvegarde pour le peek bouton volume (persisté)
             trickEngine.markLastOpened(contact, phone: snapshotPhone)
 
             if hasPhoto {
@@ -314,6 +313,32 @@ struct ContactDetailView: View {
             }
         }
         .onDisappear { stopTimer() }
+    }
+
+    // MARK: - Header background (photo floutée + dégradé, comme Contacts)
+    private var headerBackground: some View {
+        GeometryReader { geo in
+            ZStack {
+                backgroundColor
+
+                if let img = contact.thumbnailImage {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                        .blur(radius: 45, opaque: true)
+                        .scaleEffect(1.2)
+                }
+
+                LinearGradient(stops: [
+                    .init(color: .black.opacity(0.10), location: 0),
+                    .init(color: .black.opacity(0.45), location: 0.55),
+                    .init(color: .black, location: 1)
+                ], startPoint: .top, endPoint: .bottom)
+            }
+            .clipped()
+        }
     }
 
     private func startTimer() {
@@ -332,41 +357,19 @@ struct ContactDetailView: View {
     private func stopTimer() { ticker?.invalidate(); ticker = nil }
 }
 
-// MARK: - Action Button
+// MARK: - Action Button (cercle, comme Contacts)
 struct ActionBtn: View {
     let icon: String
-    let label: String
     var dimmed: Bool = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 10)
-            .fill(Color(hex: "41434f"))
-            .frame(height: 60)
-            .overlay(
-                VStack(spacing: 4) {
-                    Image(systemName: icon)
-                        .font(.system(size: 20))
-                        .foregroundColor(dimmed ? .white.opacity(0.35) : .white)
-                    Text(label)
-                        .font(.system(size: 11.4))
-                        .foregroundColor(dimmed ? .white.opacity(0.35) : .white.opacity(0.8))
-                }
-            )
-            .frame(maxWidth: .infinity)
-    }
-}
-
-// MARK: - FaceTime Button
-struct FaceTimeBtn: View {
-    let icon: String
-    var body: some View {
         Circle()
             .fill(Color(hex: "2c2c2e"))
-            .frame(width: 36, height: 36)
+            .frame(width: 66, height: 66)
             .overlay(
                 Image(systemName: icon)
-                    .font(.system(size: 15))
-                    .foregroundColor(.blue)
+                    .font(.system(size: 26))
+                    .foregroundStyle(dimmed ? Color.white.opacity(0.4) : .white)
             )
     }
 }
@@ -378,7 +381,7 @@ struct DataCard<Content: View>: View {
         content
             .padding(.horizontal, 14)
             .background(Color(hex: "1c1c1e"))
-            .cornerRadius(10)
+            .cornerRadius(12)
             .padding(.horizontal, 6)
     }
 }

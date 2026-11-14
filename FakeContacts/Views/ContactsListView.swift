@@ -61,10 +61,6 @@ struct ContactsListView: View {
     @State private var isFlashing = false
     @State private var showConfig = false
     @State private var listID = UUID()
-    @State private var plusTapCount = 0
-    @State private var titleTapCount = 0
-    @State private var plusTapTimer: Timer? = nil
-    @State private var titleTapTimer: Timer? = nil
 
     var searchDigits: String {
         searchText.filter { $0.isNumber }
@@ -121,22 +117,6 @@ struct ContactsListView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Text("Contacts")
-                        .font(.system(size: 34, weight: .bold))
-                        .padding(.vertical, 4)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .onTapGesture {
-                            titleTapCount += 1
-                            titleTapTimer?.invalidate()
-                            titleTapTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
-                                if titleTapCount >= 3 { showConfig = true }
-                                titleTapCount = 0
-                            }
-                        }
-                }
-
                 ForEach(grouped, id: \.0) { letter, contacts in
                     Section {
                         ForEach(contacts) { contact in
@@ -149,60 +129,49 @@ struct ContactsListView: View {
                                 .environmentObject(trickEngine)
                             ) {
                                 HStack(spacing: 12) {
-                                    AvatarView(contact: contact, size: 44)
+                                    AvatarView(contact: contact, size: 50)
                                     Text(contact.name)
-                                        .font(.system(size: 17, weight: .medium))
-                                        .foregroundColor(.primary)
-                                        .padding(.vertical, 2)
+                                        .font(.system(size: 17))
+                                        .foregroundStyle(.primary)
                                 }
+                                .padding(.vertical, 4)
                                 .contentShape(Rectangle())
                             }
                         }
                     } header: {
                         Text(letter)
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .padding(.top, 2)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
             .id(listID)
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color.black)
             .searchable(text: $searchText, prompt: "Search")
-            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 14) {
-                        // Peek button — fallback fiable pour le trick volume
-                        Button(action: performPeek) {
-                            Image(systemName: "waveform.circle.fill")
-                                .foregroundColor(.blue)
-                        }
-                        .accessibilityLabel("Peek dernier contact ouvert")
-
-                        // Arm / disarm trick 1 (double-tap plus)
-                        Image(systemName: "plus")
-                            .foregroundColor(trickEngine.isArmed ? .red : .blue)
-                            .onTapGesture {
-                                plusTapCount += 1
-                                plusTapTimer?.invalidate()
-                                plusTapTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { _ in
-                                    if plusTapCount >= 2 {
-                                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                                        generator.impactOccurred()
-
-                                        if trickEngine.isArmed { trickEngine.disarm() }
-                                        else { trickEngine.arm() }
-                                    }
-                                    plusTapCount = 0
-                                }
-                            }
-                    }
+                ToolbarItem(placement: .principal) {
+                    Text("Contacts")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .onTapGesture(count: 3) { showConfig = true }
                 }
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Lists") {}
-                        .foregroundColor(.blue)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    // Double-tap : arme / désarme le trick 1
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(trickEngine.isArmed ? Color.red : Color.blue)
+                        .onTapGesture(count: 2) {
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.impactOccurred()
+                            if trickEngine.isArmed { trickEngine.disarm() }
+                            else { trickEngine.arm() }
+                        }
                 }
             }
             .sheet(isPresented: $showConfig) {
@@ -217,24 +186,11 @@ struct ContactsListView: View {
             }
             .overlay {
                 if store.permissionDenied {
-                    if #available(iOS 17.0, *) {
-                        ContentUnavailableView(
-                            "No Access to Contacts",
-                            systemImage: "person.crop.circle.badge.exclamationmark",
-                            description: Text("Allow access in Settings → Privacy → Contacts")
-                        )
-                    } else {
-                        VStack(spacing: 12) {
-                            Image(systemName: "person.crop.circle.badge.exclamationmark")
-                                .font(.system(size: 48))
-                                .foregroundColor(.secondary)
-                            Text("No Access to Contacts")
-                                .font(.headline)
-                            Text("Allow access in Settings → Privacy → Contacts")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                    }
+                    ContentUnavailableView(
+                        "No Access to Contacts",
+                        systemImage: "person.crop.circle.badge.exclamationmark",
+                        description: Text("Allow access in Settings → Privacy → Contacts")
+                    )
                 }
             }
         }

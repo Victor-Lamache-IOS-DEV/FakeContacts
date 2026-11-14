@@ -105,8 +105,8 @@ struct SetupScreen: View {
         .task(id: photoItem) {
             guard let photoItem,
                   let data = try? await photoItem.loadTransferable(type: Data.self) else { return }
-            if let image = UIImage(data: data) {
-                let resized = image.preparingThumbnail(of: CGSize(width: 512, height: 512))
+            if let image = UIImage(data: data),
+               let resized = image.preparingThumbnail(of: CGSize(width: 512, height: 512)) {
                 trickEngine.myCard.photo = resized.jpegData(compressionQuality: 0.8)
             }
         }

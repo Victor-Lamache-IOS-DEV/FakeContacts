@@ -42,9 +42,9 @@ struct ContactAvatar: View {
         case .glass:
             ZStack {
                 Circle()
-                    .fill(.white.opacity(0.14))
+                    .fill(.white.opacity(0.18))
                 Circle()
-                    .glassEffect(.prominent, in: .circle)
+                    .glassEffect(.regular, in: .circle)
                 Circle()
                     .strokeBorder(
                         LinearGradient(

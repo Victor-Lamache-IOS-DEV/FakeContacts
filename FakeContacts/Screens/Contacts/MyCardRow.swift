@@ -5,11 +5,11 @@ struct MyCardRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ContactAvatar(image: nil, initials: contact.initials, size: 40)
+            ContactAvatar(image: contact.thumbnail, initials: contact.initials, size: 40)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(contact.name)
-                    .font(.system(size: 17))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
 
                 Text("My Card")

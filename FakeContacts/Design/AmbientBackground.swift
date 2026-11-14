@@ -3,7 +3,6 @@ import UIKit
 
 struct AmbientBackground: View {
     let image: UIImage?
-    let seed: String
 
     var body: some View {
         Color.black
@@ -17,9 +16,9 @@ struct AmbientBackground: View {
                 } else {
                     LinearGradient(
                         colors: [
-                            Color(hue: hue, saturation: 0.42, brightness: 0.44),
-                            Color(hue: hue, saturation: 0.50, brightness: 0.18),
-                            Color(hue: (hue + 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.55, brightness: 0.06)
+                            Color(red: 0.58, green: 0.62, blue: 0.65),
+                            Color(red: 0.36, green: 0.39, blue: 0.46),
+                            Color(red: 0.05, green: 0.05, blue: 0.09)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -35,10 +34,5 @@ struct AmbientBackground: View {
             }
             .clipped()
             .ignoresSafeArea()
-    }
-
-    private var hue: Double {
-        let hash = seed.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0x7fff_ffff }
-        return Double(hash % 360) / 360
     }
 }

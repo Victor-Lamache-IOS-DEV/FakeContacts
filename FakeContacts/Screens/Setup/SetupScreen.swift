@@ -1,8 +1,8 @@
 import SwiftUI
 import UIKit
+import PhotosUI
 
-struct SetupScreen: View {
-    @EnvironmentObject private var trickEngine: TrickEngine
+struct SetupScreen: View {    @EnvironmentObject private var trickEngine: TrickEngine
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -34,9 +34,13 @@ struct SetupScreen: View {
 
     // MARK: - My Card
 
+    @State private var photoItem: PhotosPickerItem?
+
     private var myCardSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
+                myCardPhotoPicker
+
                 SetupTextField(
                     title: "Name",
                     text: $trickEngine.myCard.name
@@ -65,6 +69,46 @@ struct SetupScreen: View {
             Text("My Card")
         } footer: {
             Text("Appears at the top of the contacts list as your own card. Empty fields are hidden.")
+        }
+    }
+
+    // MARK: - My Card photo
+
+    private var myCardPhotoPicker: some View {
+        HStack(spacing: 12) {
+            ContactAvatar(
+                image: trickEngine.myCard.photo.flatMap { UIImage(data: $0) },
+                initials: trickEngine.myCard.initials,
+                size: 56
+            )
+
+            PhotosPicker(selection: $photoItem, matching: .images) {
+                Label(trickEngine.myCard.photo == nil ? "Add Photo" : "Change Photo", systemImage: "photo")
+            }
+            .font(.body)
+            .foregroundStyle(Theme.link)
+
+            if trickEngine.myCard.photo != nil {
+                Button {
+                    trickEngine.myCard.photo = nil
+                } label: {
+                    Text("Remove")
+                        .font(.body)
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+        .task(id: photoItem) {
+            guard let photoItem,
+                  let data = try? await photoItem.loadTransferable(type: Data.self) else { return }
+            if let image = UIImage(data: data) {
+                let resized = image.preparingThumbnail(of: CGSize(width: 512, height: 512))
+                trickEngine.myCard.photo = resized.jpegData(compressionQuality: 0.8)
+            }
         }
     }
 

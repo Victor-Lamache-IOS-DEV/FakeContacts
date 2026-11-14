@@ -173,6 +173,7 @@ final class TrickEngine: ObservableObject {
             name: name,
             phoneNumbers: phone.isEmpty ? [] : [ContactField(label: "mobile", value: phone)],
             emailAddresses: email.isEmpty ? [] : [ContactField(label: "email", value: email)],
+            imageData: myCard.photo,
             isForced: true
         )
     }

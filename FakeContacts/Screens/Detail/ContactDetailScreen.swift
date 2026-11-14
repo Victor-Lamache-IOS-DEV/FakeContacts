@@ -22,7 +22,7 @@ struct ContactDetailScreen: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            AmbientBackground(image: image, seed: contact.id)
+            AmbientBackground(image: image)
 
             ScrollView {
                 if let presentation {
@@ -171,26 +171,39 @@ struct ContactDetailScreen: View {
             posterRow
         }
 
-        // Phone card: shown only when the contact has phones.
-        if !presentation.phoneNumbers.isEmpty {
-            InfoCard {
-                VStack(spacing: 0) {
+        // Phone card: always shown.
+        InfoCard {
+            VStack(spacing: 0) {
+                if presentation.phoneNumbers.isEmpty {
+                    InfoRow(
+                        label: NSLocalizedString("mobile", comment: "Phone label"),
+                        value: "",
+                        trailingIcon: "phone.fill",
+                        valueColor: .white
+                    )
+                } else {
                     ForEach(Array(presentation.phoneNumbers.enumerated()), id: \.element.id) { index, field in
                         phoneRow(field)
                         if index < presentation.phoneNumbers.count - 1 {
                             Divider().padding(.leading, 16)
                         }
                     }
-
-                    Divider().padding(.leading, 16)
-                    notesBody
                 }
+
+                Divider().padding(.leading, 16)
+                notesBody
             }
         }
 
-        // Email card: shown only when the contact has emails.
-        if !presentation.emailAddresses.isEmpty {
-            InfoCard {
+        // Email card: always shown.
+        InfoCard {
+            if presentation.emailAddresses.isEmpty {
+                InfoRow(
+                    label: NSLocalizedString("email", comment: "Email label"),
+                    value: "",
+                    valueColor: Theme.link
+                )
+            } else {
                 VStack(spacing: 0) {
                     ForEach(Array(presentation.emailAddresses.enumerated()), id: \.element.id) { index, field in
                         emailRow(field)
@@ -202,21 +215,12 @@ struct ContactDetailScreen: View {
             }
         }
 
-        // Birthday card: shown only when a birthday is present.
-        if let birthdayText = presentation.birthdayText {
-            InfoCard {
-                InfoRow(
-                    label: NSLocalizedString("birthday", comment: "Birthday field"),
-                    value: birthdayText
-                )
-            }
-        }
-
-        // Standalone notes card when there is no phone to host it.
-        if presentation.phoneNumbers.isEmpty {
-            InfoCard {
-                notesBody
-            }
+        // Birthday card: always shown.
+        InfoCard {
+            InfoRow(
+                label: NSLocalizedString("birthday", comment: "Birthday field"),
+                value: presentation.birthdayText ?? ""
+            )
         }
 
         InfoCard {

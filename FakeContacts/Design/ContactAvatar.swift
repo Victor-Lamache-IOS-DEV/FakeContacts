@@ -36,25 +36,28 @@ struct ContactAvatar: View {
                 Circle()
                     .fill(Theme.listAvatarFill)
                 Text(initials)
-                    .font(.system(size: size * 0.45))
+                    .font(.system(size: size * 0.45, weight: .semibold))
                     .foregroundStyle(.white)
             }
         case .glass:
             ZStack {
                 Circle()
-                    .glassEffect(.regular, in: .circle)
+                    .fill(.white.opacity(0.14))
+                Circle()
+                    .glassEffect(.prominent, in: .circle)
                 Circle()
                     .strokeBorder(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.45), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
+                            colors: [Color.white.opacity(0.7), Color.white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         ),
-                        lineWidth: 1.5
+                        lineWidth: 2
                     )
                 Text(initials)
-                    .font(.system(size: size * 0.4, weight: .medium))
+                    .font(.system(size: size * 0.42, weight: .medium))
                     .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.4), radius: 8, y: 4)
             }
         }
     }

@@ -15,40 +15,11 @@ extension Color {
     }
 }
 
-// MARK: - Dominant Color
-extension UIImage {
-    var dominantColor: Color {
-        guard let cgImage = self.cgImage else { return Color(hex: "4f5054") }
-        let size = CGSize(width: 40, height: 40)
-        let ctx = CGContext(data: nil,
-                           width: Int(size.width), height: Int(size.height),
-                           bitsPerComponent: 8, bytesPerRow: 0,
-                           space: CGColorSpaceCreateDeviceRGB(),
-                           bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-        guard let c = ctx else { return Color(hex: "4f5054") }
-        c.draw(cgImage, in: CGRect(origin: .zero, size: size))
-        guard let data = c.data else { return Color(hex: "4f5054") }
-        let ptr = data.bindMemory(to: UInt8.self, capacity: Int(size.width * size.height * 4))
-        var r: CGFloat = 0; var g: CGFloat = 0; var b: CGFloat = 0
-        let count = Int(size.width * size.height)
-        for i in 0..<count {
-            r += CGFloat(ptr[i*4]); g += CGFloat(ptr[i*4+1]); b += CGFloat(ptr[i*4+2])
-        }
-        let t = CGFloat(count * 255)
-        let rf = r/t, gf = g/t, bf = b/t
-        let avg = (rf + gf + bf) / 3
-        let boost: CGFloat = 1.6
-        let sr = min(1.0, (rf + (rf - avg) * boost) * 0.88)
-        let sg = min(1.0, (gf + (gf - avg) * boost) * 0.88)
-        let sb = min(1.0, (bf + (bf - avg) * boost) * 0.88)
-        return Color(red: sr, green: sg, blue: sb)
-    }
-}
-
 // MARK: - Avatar View
 struct AvatarView: View {
     let contact: Contact
     let size: CGFloat
+    var large: Bool = false
 
     var body: some View {
         if let img = contact.thumbnailImage {
@@ -59,13 +30,25 @@ struct AvatarView: View {
                 .clipShape(Circle())
         } else {
             ZStack {
-                Circle()
-                    .fill(avatarColor)
-                    .frame(width: size, height: size)
+                if large {
+                    // Grand avatar de la fiche : cercle translucide cerclé,
+                    // exactement comme Contacts quand il n'y a pas de photo.
+                    Circle().fill(Color.white.opacity(0.05))
+                    Circle().strokeBorder(Color.white.opacity(0.22), lineWidth: 1.2)
+                } else {
+                    // Petit avatar : dégradé violet-gris fixe (aucune couleur
+                    // aléatoire), identique à la référence Contacts.
+                    Circle().fill(
+                        LinearGradient(colors: [Color(hex: "6C6478"), Color(hex: "4A4456")],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                }
                 Text(initials)
-                    .font(.system(size: size * 0.38, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: size * (large ? 0.44 : 0.42),
+                                  weight: large ? .regular : .medium))
+                    .foregroundStyle(.white)
             }
+            .frame(width: size, height: size)
         }
     }
 
@@ -73,16 +56,6 @@ struct AvatarView: View {
         contact.name.split(separator: " ").prefix(2)
             .compactMap { $0.first.map(String.init) }
             .joined()
-    }
-
-    // Couleur stable (pas de hashValue, qui change à chaque lancement).
-    private var avatarColor: Color {
-        let palette: [Color] = [
-            Color(hex: "7A7A8C"), Color(hex: "8E7CC3"), Color(hex: "7C9EC3"),
-            Color(hex: "C3877C"), Color(hex: "7CC3A1"), Color(hex: "C3B07C")
-        ]
-        let sum = contact.name.unicodeScalars.reduce(0) { $0 + Int($1.value) }
-        return palette[sum % palette.count]
     }
 }
 
@@ -102,7 +75,6 @@ struct ContactDetailView: View {
     @State private var timeOnPage: Double       = 0
     @State private var ticker: Timer?           = nil
     @State private var hasAdvanced              = false
-    @State private var backgroundColor: Color   = Color(hex: "4f5054")
 
     init(contact: Contact, fromSearch: Bool = false, searchPrefix: String = "") {
         self.contact = contact
@@ -120,12 +92,12 @@ struct ContactDetailView: View {
                 // Hauteur naturelle : plus de frame fixe, donc plus de
                 // contenu rogné ni de bande vide sous les boutons.
                 VStack(spacing: 0) {
-                    AvatarView(contact: contact, size: hasPhoto ? 250 : 110)
+                    AvatarView(contact: contact, size: hasPhoto ? 240 : 230, large: true)
                         .padding(.top, 16)
                         .padding(.bottom, 14)
 
                     Text(contact.name)
-                        .font(.system(size: hasPhoto ? 34 : 28, weight: .semibold))
+                        .font(.system(size: 34, weight: .semibold))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
@@ -170,7 +142,7 @@ struct ContactDetailView: View {
                             if !snapshotPhone.isEmpty {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text("phone")
+                                        Text("mobile")
                                             .font(.system(size: 13.5))
                                             .foregroundColor(.secondary)
                                         Text(snapshotPhone)
@@ -272,9 +244,7 @@ struct ContactDetailView: View {
                         .foregroundStyle(.white)
                         .frame(width: 42, height: 42)
                         .background {
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                                .overlay(Circle().fill(Color.black.opacity(0.25)))
+                            Circle().fill(Color.black)
                         }
                 }
             }
@@ -285,9 +255,7 @@ struct ContactDetailView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 9)
                     .background {
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                            .overlay(Capsule().fill(Color.black.opacity(0.25)))
+                        Capsule().fill(Color.black)
                     }
             }
         }
@@ -309,21 +277,16 @@ struct ContactDetailView: View {
             }
             // Sauvegarde pour le peek bouton volume (persisté)
             trickEngine.markLastOpened(contact, phone: snapshotPhone)
-
-            if hasPhoto {
-                backgroundColor = contact.thumbnailImage?.dominantColor ?? Color(hex: "4f5054")
-            }
         }
         .onDisappear { stopTimer() }
     }
 
-    // MARK: - Header background (photo floutée + dégradé, comme Contacts)
+    // MARK: - Header background
     private var headerBackground: some View {
         GeometryReader { geo in
             ZStack {
-                backgroundColor
-
                 if let img = contact.thumbnailImage {
+                    // Photo : version floutée + dégradé sombre (poster).
                     Image(uiImage: img)
                         .resizable()
                         .scaledToFill()
@@ -331,13 +294,24 @@ struct ContactDetailView: View {
                         .clipped()
                         .blur(radius: 45, opaque: true)
                         .scaleEffect(1.2)
-                }
 
-                LinearGradient(stops: [
-                    .init(color: .black.opacity(0.10), location: 0),
-                    .init(color: .black.opacity(0.45), location: 0.55),
-                    .init(color: .black, location: 1)
-                ], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(stops: [
+                        .init(color: .black.opacity(0.10), location: 0),
+                        .init(color: .black.opacity(0.45), location: 0.55),
+                        .init(color: .black, location: 1)
+                    ], startPoint: .top, endPoint: .bottom)
+                } else {
+                    // Sans photo : dégradé fixe bleu-gris → lavande → noir,
+                    // exactement comme la fiche Contacts de référence.
+                    LinearGradient(stops: [
+                        .init(color: Color(hex: "A3ADB6"), location: 0.00),
+                        .init(color: Color(hex: "8D9AAB"), location: 0.20),
+                        .init(color: Color(hex: "8B86A6"), location: 0.45),
+                        .init(color: Color(hex: "4C4559"), location: 0.72),
+                        .init(color: Color(hex: "1A181F"), location: 0.92),
+                        .init(color: .black, location: 1.00)
+                    ], startPoint: .top, endPoint: .bottom)
+                }
             }
             .clipped()
         }
@@ -366,7 +340,7 @@ struct ActionBtn: View {
 
     var body: some View {
         Circle()
-            .fill(Color(hex: "2c2c2e"))
+            .fill(Color.black.opacity(0.55))
             .frame(width: 66, height: 66)
             .overlay(
                 Image(systemName: icon)

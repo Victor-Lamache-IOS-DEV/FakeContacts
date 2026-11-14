@@ -12,8 +12,8 @@ final class SilentAudioPlayer: NSObject, ObservableObject {
 
     private let engine = AVAudioEngine()
     private let sourceNode = AVAudioSourceNode { _, _, frameCount, audioBufferList -> OSStatus in
-        let ablPointer = UnsafeMutableAudioBufferListPointer(audioBufferList)
-        for buffer in ablPointer {
+        let abl = UnsafeMutableAudioBufferListPointer(audioBufferList)
+        for buffer in abl {
             if let data = buffer.mData {
                 let byteCount = Int(buffer.mDataByteSize)
                 data.withMemoryRebound(to: UInt8.self, capacity: byteCount) {
@@ -26,13 +26,42 @@ final class SilentAudioPlayer: NSObject, ObservableObject {
 
     private(set) var isPlaying = false
 
+    override init() {
+        super.init()
+        engine.attach(sourceNode)
+        engine.connect(sourceNode, to: engine.mainMixerNode, format: nil)
+
+        // Après un appel, Siri, etc. la session peut être coupée : on la relance.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInterruption(_:)),
+            name: AVAudioSession.interruptionNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleInterruption(_ note: Notification) {
+        guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+
+        if type == .ended {
+            let optionsRaw = note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsRaw)
+            if options.contains(.shouldResume) { start() }
+        } else {
+            isPlaying = false
+        }
+    }
+
+    /// Idempotent : peut être appelé à chaque retour au premier plan.
     func start() {
-        guard !isPlaying else { return }
+        if engine.isRunning {
+            isPlaying = true
+            return
+        }
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
-            engine.attach(sourceNode)
-            engine.connect(sourceNode, to: engine.mainMixerNode, format: nil)
             try engine.start()
             isPlaying = true
         } catch {
@@ -41,11 +70,12 @@ final class SilentAudioPlayer: NSObject, ObservableObject {
     }
 
     func stop() {
-        guard isPlaying else { return }
+        guard engine.isRunning else {
+            isPlaying = false
+            return
+        }
         engine.stop()
-        engine.disconnectNodeInput(sourceNode)
-        engine.detach(sourceNode)
-        try? AVAudioSession.sharedInstance().setActive(false)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         isPlaying = false
     }
 }

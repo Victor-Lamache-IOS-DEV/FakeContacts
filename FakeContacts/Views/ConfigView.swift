@@ -149,7 +149,7 @@ struct ConfigView: View {
                 } header: {
                     Text("Peek (volume button)")
                 } footer: {
-                    Text("Press the volume-down button while viewing the list to recall the last opened contact — works even with the Ring/Silent switch on silent.")
+                    Text("Press either volume button (up or down) while viewing the list to recall the last opened contact. Works at any volume level and even with the Ring/Silent switch on silent.")
                 }
             }
             .navigationTitle("Setup")

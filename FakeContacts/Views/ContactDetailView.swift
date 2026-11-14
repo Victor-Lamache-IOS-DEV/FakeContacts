@@ -255,6 +255,8 @@ struct ContactDetailView: View {
                 .background(Color.black)
             }
         }
+        // Autorise le fond du header à remonter sous la barre de navigation.
+        .scrollClipDisabled()
         .background(Color.black.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .navigationTitle("")

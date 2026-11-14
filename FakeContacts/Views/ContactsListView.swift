@@ -161,31 +161,18 @@ struct ContactsListView: View {
     @StateObject private var store = ContactStore()
     @StateObject private var volumeObserver = VolumeObserver()
     @State private var searchText = ""
-    @State private var isFlashing = false
+    @State private var peekName = ""
+    @State private var peekClearWork: DispatchWorkItem?
     @State private var showConfig = false
+    @FocusState private var searchFocused: Bool
 
     var searchDigits: String {
         searchText.filter { $0.isNumber }
     }
 
-    // Contact affiché lors du peek (dernier contact ouvert).
-    private var peekContact: Contact? {
-        let name = trickEngine.lastOpenedName
-        guard !name.isEmpty else { return nil }
-        if let real = store.contacts.first(where: { $0.name == name }) { return real }
-        return Contact(name: name, phone: trickEngine.lastOpenedPhone, note: "")
-    }
-
+    // MARK: - Contacts matching
     var filteredContacts: [Contact] {
-        let base = matchingContacts(for: searchText)
-
-        // Pendant le peek, on garantit que le dernier contact ouvert apparaît,
-        // même s'il vient d'un contact forcé absent du carnet.
-        if isFlashing, let peek = peekContact,
-           !base.contains(where: { $0.name.caseInsensitiveCompare(peek.name) == .orderedSame }) {
-            return [peek] + base
-        }
-        return base
+        matchingContacts(for: searchText)
     }
 
     private func matchingContacts(for text: String) -> [Contact] {
@@ -249,20 +236,35 @@ struct ContactsListView: View {
                                 NavigationLink(destination:
                                     ContactDetailView(
                                         contact: contact,
-                                        fromSearch: !searchText.isEmpty && !isFlashing,
+                                        fromSearch: !searchText.isEmpty,
                                         searchPrefix: searchDigits
                                     )
                                     .environmentObject(trickEngine)
                                 ) {
                                     HStack(spacing: 12) {
-                                        AvatarView(contact: contact, size: 56)
-                                        Text(contact.name)
-                                            .font(.system(size: 17))
-                                            .foregroundStyle(.white)
+                                        AvatarView(contact: contact, size: 40)
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(contact.name)
+                                                .font(.system(size: 17))
+                                                .foregroundStyle(.white)
+
+                                            // Pendant une recherche, on montre le
+                                            // numéro : pour les contacts forcés, il
+                                            // commence par les chiffres tapés.
+                                            if !searchText.isEmpty && !contact.phone.isEmpty {
+                                                Text(formatPhone(contact.phone))
+                                                    .font(.system(size: 15))
+                                                    .foregroundStyle(Color.white.opacity(0.5))
+                                            }
+                                        }
                                     }
-                                    .padding(.vertical, 6)
+                                    .padding(.vertical, 3)
                                     .contentShape(Rectangle())
                                 }
+                                .simultaneousGesture(TapGesture().onEnded {
+                                    endSearchInteraction()
+                                })
                             }
                         } header: {
                             Text(letter)
@@ -333,6 +335,14 @@ struct ContactsListView: View {
                     VolumeController.shared.reset()
                 }
             }
+            .onChange(of: searchText) { _, newValue in
+                // L'utilisateur reprend la main : le nom du peek disparaît.
+                if !newValue.isEmpty {
+                    peekClearWork?.cancel()
+                    peekName = ""
+                }
+            }
+            .onDisappear { searchFocused = false }
         }
         .background {
             // MPVolumeView invisible mais bien dans la hiérarchie : c'est lui
@@ -350,12 +360,19 @@ struct ContactsListView: View {
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(Color.white.opacity(0.55))
 
-            TextField("Search", text: $searchText)
-                .font(.system(size: 17))
-                .foregroundStyle(.white)
-                .tint(.blue)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
+            TextField(
+                "",
+                text: $searchText,
+                prompt: Text(peekName.isEmpty ? "Search" : peekName)
+                    .foregroundColor(peekName.isEmpty ? Color.white.opacity(0.5) : .white)
+            )
+            .font(.system(size: 17))
+            .foregroundStyle(.white)
+            .tint(.blue)
+            .autocorrectionDisabled()
+            .submitLabel(.search)
+            .focused($searchFocused)
+            .onSubmit { searchFocused = false }
 
             if searchText.isEmpty {
                 Image(systemName: "mic.fill")
@@ -375,16 +392,17 @@ struct ContactsListView: View {
         .frame(height: 46)
         .background(Capsule().fill(Color(white: 0.13)))
         .padding(.horizontal, 16)
-        .padding(.top, 6)
-        .padding(.bottom, 8)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
         .background(Color.black)
     }
 
     // MARK: - Peek
-    // Discret : on écrit simplement le nom dans la barre de recherche,
-    // la liste se filtre naturellement, puis on efface au bout de 3 s.
+    // Discret : le nom du dernier contact ouvert s'affiche simplement dans la
+    // barre de recherche, sans toucher à la recherche ni filtrer la liste.
     private func performPeek() {
-        guard peekContact != nil else {
+        let name = trickEngine.lastOpenedName
+        guard !name.isEmpty else {
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.warning)
             return
@@ -392,13 +410,22 @@ struct ContactsListView: View {
 
         trickEngine.triggerPeekFeedback()
 
-        let name = trickEngine.lastOpenedName
-        isFlashing = true
-        searchText = name
+        peekClearWork?.cancel()
+        peekName = name
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            if searchText == name { searchText = "" }
-            isFlashing = false
+        let work = DispatchWorkItem {
+            if peekName == name { peekName = "" }
         }
+        peekClearWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+    }
+
+    // Quitte la recherche (clavier + nom du peek) sans effacer le texte tapé,
+    // pour retrouver exactement la même liste en revenant du contact.
+    private func endSearchInteraction() {
+        searchFocused = false
+        peekClearWork?.cancel()
+        peekClearWork = nil
+        peekName = ""
     }
 }

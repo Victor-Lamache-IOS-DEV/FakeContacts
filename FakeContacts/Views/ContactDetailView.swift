@@ -64,18 +64,30 @@ struct AvatarView: View {
         } else {
             ZStack {
                 if large {
-                    // Grand avatar sans photo : cercle translucide cerclé.
-                    Circle().fill(Color.white.opacity(0.05))
-                    Circle().strokeBorder(Color.white.opacity(0.22), lineWidth: 1.2)
+                    // Grand avatar sans photo : verre très discret avec un
+                    // liseré lumineux dégradé (clair en haut, éteint en bas),
+                    // et une grande initiale, comme la fiche Contacts.
+                    Circle().fill(
+                        LinearGradient(colors: [Color.black.opacity(0.07), Color.black.opacity(0.0)],
+                                       startPoint: .top, endPoint: .bottom)
+                    )
+                    Circle().strokeBorder(
+                        LinearGradient(colors: [Color.white.opacity(0.55),
+                                                Color.white.opacity(0.20),
+                                                Color.white.opacity(0.32)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 1
+                    )
                 } else {
                     // Petit avatar : dégradé violet-gris fixe, aucune couleur aléatoire.
                     Circle().fill(
-                        LinearGradient(colors: [Color(hex: "6C6478"), Color(hex: "4A4456")],
+                        LinearGradient(colors: [Color(hex: "6A5C78"), Color(hex: "493D55")],
                                        startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
+                    Circle().strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
                 }
                 Text(initials)
-                    .font(.system(size: size * (large ? 0.44 : 0.42),
+                    .font(.system(size: size * (large ? 0.50 : 0.46),
                                   weight: large ? .regular : .medium))
                     .foregroundStyle(.white)
             }
@@ -171,7 +183,7 @@ struct ContactDetailView: View {
                                 if !snapshotPhone.isEmpty {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 3) {
-                                            Text("phone")
+                                            Text("mobile")
                                                 .font(.system(size: 13))
                                                 .foregroundStyle(Color.white.opacity(0.55))
                                             Text(snapshotPhone)
@@ -181,7 +193,7 @@ struct ContactDetailView: View {
                                         Spacer()
                                         Image(systemName: "phone.fill")
                                             .font(.system(size: 17))
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(Color(hex: "B8B2E8"))
                                     }
                                     .padding(.vertical, 12)
 
@@ -283,8 +295,19 @@ struct ContactDetailView: View {
             }
         }
         .onAppear {
+            // Le clavier de la recherche ne doit jamais rester affiché
+            // derrière la fiche (retour liste propre, sans barre fantôme).
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil, from: nil, for: nil
+            )
+
             if fromSearch && contact.forcedSuffix != nil {
-                let rawPhone     = searchPrefix + (contact.forcedSuffix ?? "")
+                // Le numéro affiché reprend la suite de chiffres tapés,
+                // suivie du suffixe du contact forcé.
+                let rawPhone     = contact.phone.isEmpty
+                    ? searchPrefix + (contact.forcedSuffix ?? "")
+                    : contact.phone
                 snapshotPhone    = formatPhone(rawPhone)
                 snapshotNote     = contact.forcedSearchNote ?? ""
                 snapshotEmail    = contact.forcedEmail ?? ""
@@ -318,12 +341,13 @@ struct ContactDetailView: View {
         } else {
             // Sans photo : dégradé fixe bleu-gris → lavande → sombre.
             LinearGradient(stops: [
-                .init(color: Color(hex: "A6B0B7"), location: 0.00),
-                .init(color: Color(hex: "8E99A6"), location: 0.22),
-                .init(color: Color(hex: "8A86A4"), location: 0.45),
-                .init(color: Color(hex: "4B4557"), location: 0.70),
-                .init(color: Color(hex: "24202C"), location: 0.88),
-                .init(color: Color(hex: "151319"), location: 1.00)
+                .init(color: Color(hex: "B2BCC3"), location: 0.00),
+                .init(color: Color(hex: "A5AFB8"), location: 0.18),
+                .init(color: Color(hex: "9694AD"), location: 0.38),
+                .init(color: Color(hex: "8A84A6"), location: 0.52),
+                .init(color: Color(hex: "5A5470"), location: 0.68),
+                .init(color: Color(hex: "262230"), location: 0.84),
+                .init(color: Color(hex: "0E0C12"), location: 1.00)
             ], startPoint: .top, endPoint: .bottom)
         }
     }

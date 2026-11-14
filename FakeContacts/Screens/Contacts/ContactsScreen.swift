@@ -122,15 +122,6 @@ struct ContactsScreen: View {
                         limitedAccessBanner
                     }
 
-                    if !isSearching, let meCard = store.meCard {
-                        NavigationLink {
-                            ContactDetailScreen(contact: meCard)
-                        } label: {
-                            MyCardRow(contact: meCard)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
                     ForEach(contactSections) { section in
                         Section {
                             ForEach(Array(section.contacts.enumerated()), id: \.element.id) { index, contact in

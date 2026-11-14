@@ -22,7 +22,6 @@ enum ContactAccessState: Equatable {
 final class ContactStore: ObservableObject {
     @Published private(set) var contacts: [Contact] = []
     @Published private(set) var groups: [ContactGroup] = []
-    @Published private(set) var meCard: Contact?
     @Published private(set) var accessState: ContactAccessState = .notDetermined
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
@@ -102,13 +101,11 @@ final class ContactStore: ObservableObject {
             do {
                 let contacts = try Self.fetchContacts(groupID: groupID)
                 let groups = try Self.fetchGroups()
-                let meCard = Self.fetchMeCard()
 
                 DispatchQueue.main.async {
                     guard generation == self.fetchGeneration else { return }
                     self.contacts = contacts
                     self.groups = groups
-                    self.meCard = meCard
                     self.isLoading = false
                     self.hasLoadedOnce = true
 
@@ -165,12 +162,6 @@ final class ContactStore: ObservableObject {
         let keys = [CNContactImageDataKey as CNKeyDescriptor]
         let contact = try? contactStore.unifiedContact(withIdentifier: identifier, keysToFetch: keys)
         return contact?.imageData
-    }
-
-    static func fetchMeCard() -> Contact? {
-        let contactStore = CNContactStore()
-        guard let me = try? contactStore.unifiedMeContactWithKeys(toFetch: fetchKeys) else { return nil }
-        return makeContact(from: me)
     }
 
     // MARK: Fetching

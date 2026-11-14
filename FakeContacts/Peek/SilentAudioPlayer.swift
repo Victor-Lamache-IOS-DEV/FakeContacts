@@ -69,7 +69,7 @@ final class SilentAudioPlayer {
         stopEngine()
 
         let engine = AVAudioEngine()
-        let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2)
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2) else { return }
         let source = AVAudioSourceNode(format: format) { _, _, frameCount, audioBufferList -> OSStatus in
             let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
             for buffer in buffers {

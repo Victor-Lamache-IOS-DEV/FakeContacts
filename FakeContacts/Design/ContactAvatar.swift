@@ -62,9 +62,14 @@ struct ContactAvatar: View {
                     .glassEffect(.regular, in: .circle)
 
                 Circle()
+                    .strokeBorder(Color.black.opacity(0.3), lineWidth: 6)
+                    .blur(radius: 8)
+                    .offset(y: 4)
+
+                Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.18), .clear],
+                            colors: [Color.white.opacity(0.2), .clear],
                             startPoint: .top,
                             endPoint: .center
                         )
@@ -83,10 +88,9 @@ struct ContactAvatar: View {
                 Text(initials)
                     .font(.system(size: size * 0.42, weight: .medium))
                     .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.35), radius: 8, y: 4)
+                    .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
             }
             .clipShape(Circle())
-            .shadow(color: .black.opacity(0.45), radius: 28, y: 14)
         }
     }
 }

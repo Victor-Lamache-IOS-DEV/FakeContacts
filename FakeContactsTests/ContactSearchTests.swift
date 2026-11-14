@@ -83,6 +83,30 @@ final class ContactSearchTests: XCTestCase {
         XCTAssertEqual(results.map(\.name), ["Sarah"])
     }
 
+    func testKeepsForcedContactsWhileTypingPastTrigger() {
+        let results = ContactSearch.results(
+            contacts: [alice],
+            query: "078773",
+            forcedContacts: [sarah],
+            triggerDigits: 4,
+            searchTrickArmed: true
+        )
+
+        XCTAssertEqual(results.map(\.name), ["Sarah"])
+    }
+
+    func testHidesForcedContactsBeyondTenDigits() {
+        let results = ContactSearch.results(
+            contacts: [alice],
+            query: "07877312345",
+            forcedContacts: [sarah],
+            triggerDigits: 4,
+            searchTrickArmed: true
+        )
+
+        XCTAssertFalse(results.contains { $0.name == "Sarah" })
+    }
+
     func testArmedBelowTriggerLengthMixesRealAndForcedContacts() {
         let results = ContactSearch.results(
             contacts: [alice, bob],

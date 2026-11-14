@@ -28,6 +28,9 @@ struct ContactsScreen: View {
                     ToolbarItem(placement: .topBarLeading) {
                         listsButton
                     }
+                    ToolbarItem(placement: .principal) {
+                        titleButton
+                    }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if showsSearchBar {
@@ -243,6 +246,16 @@ struct ContactsScreen: View {
     }
 
     // MARK: - Toolbar and hidden triggers
+
+    private var titleButton: some View {
+        Text("Contacts")
+            .font(.headline)
+            .foregroundStyle(.white)
+            .contentShape(Rectangle())
+            .onTapGesture(count: 3) {
+                showingSetup = true
+            }
+    }
 
     private var listsButton: some View {
         Button {

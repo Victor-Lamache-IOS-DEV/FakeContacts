@@ -44,13 +44,13 @@ enum ContactSearch {
             return real.sorted(by: nameOrder)
         }
 
-        guard digits.count <= triggerDigits else {
+        guard digits.count <= 10 else {
             return real.sorted(by: nameOrder)
         }
 
         let fake = forcedContacts.sorted(by: nameOrder)
 
-        if digits.count == triggerDigits {
+        if digits.count >= triggerDigits {
             return fake
         }
 

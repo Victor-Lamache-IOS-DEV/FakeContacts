@@ -135,7 +135,7 @@ final class TrickEngine: ObservableObject {
             guard !name.isEmpty else { return nil }
 
             let suffix = forced.phoneSuffix.filter(\.isNumber)
-            let phoneValue = suffix.isEmpty ? safeDigits : safeDigits + suffix
+            let phoneValue = safeDigits + String(suffix.prefix(max(0, 10 - safeDigits.count)))
             let phones = phoneValue.isEmpty
                 ? []
                 : [ContactField(label: "mobile", value: phoneValue)]

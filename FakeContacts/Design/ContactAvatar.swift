@@ -13,18 +13,19 @@ struct ContactAvatar: View {
     var style: Style = .solid
 
     var body: some View {
-        Group {
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                initialsView
+        Color.clear
+            .overlay {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    initialsView
+                }
             }
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
-        .accessibilityHidden(true)
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .accessibilityHidden(true)
     }
 
     @ViewBuilder

@@ -8,6 +8,7 @@ struct SetupScreen: View {
     var body: some View {
         NavigationStack {
             Form {
+                myCardSection
                 sequenceSection
                 profilesSection
                 searchSection
@@ -28,6 +29,42 @@ struct SetupScreen: View {
                     .fontWeight(.semibold)
                 }
             }
+        }
+    }
+
+    // MARK: - My Card
+
+    private var myCardSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                SetupTextField(
+                    title: "Name",
+                    text: $trickEngine.myCard.name
+                )
+
+                Divider()
+
+                SetupTextField(
+                    title: "Phone",
+                    text: phoneBinding($trickEngine.myCard.phone, maxDigits: 10),
+                    keyboardType: .phonePad
+                )
+
+                Divider()
+
+                SetupTextField(
+                    title: "Email",
+                    text: $trickEngine.myCard.email,
+                    keyboardType: .emailAddress,
+                    autocapitalization: .never,
+                    disablesAutocorrection: true
+                )
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("My Card")
+        } footer: {
+            Text("Appears at the top of the contacts list as your own card. Empty fields are hidden.")
         }
     }
 

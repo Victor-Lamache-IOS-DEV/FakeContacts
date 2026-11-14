@@ -41,8 +41,17 @@ struct ContactAvatar: View {
             }
         case .glass:
             ZStack {
-                Color.clear
+                Circle()
                     .glassEffect(.regular, in: .circle)
+                Circle()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.45), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1.5
+                    )
                 Text(initials)
                     .font(.system(size: size * 0.4, weight: .medium))
                     .foregroundStyle(.white)

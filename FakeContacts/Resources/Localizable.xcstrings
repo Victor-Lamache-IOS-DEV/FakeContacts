@@ -43,6 +43,7 @@
     "Minimum time on page" : { "localizations" : { "fr" : { "stringUnit" : { "state" : "translated", "value" : "Durée minimale sur la page" } } } },
     "mobile" : { "localizations" : { "fr" : { "stringUnit" : { "state" : "translated", "value" : "mobile" } } } },
     "My Card" : { "localizations" : { "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ma carte" } } } },
+    "Appears at the top of the contacts list as your own card. Empty fields are hidden." : { "localizations" : { "fr" : { "stringUnit" : { "state" : "translated", "value" : "Apparaît en haut de la liste des contacts comme votre carte. Les champs vides sont masqués." } } } },
     "Name" : { "localizations" : { "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nom" } } } },
     "No Access to Contacts" : { "localizations" : { "fr" : { "stringUnit" : { "state" : "translated", "value" : "Accès aux contacts refusé" } } } },
     "No Contacts" : { "localizations" : { "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun contact" } } } },

@@ -125,6 +125,15 @@ struct ContactsScreen: View {
                         limitedAccessBanner
                     }
 
+                    if !isSearching, let myCard = trickEngine.myCardContact {
+                        NavigationLink {
+                            ContactDetailScreen(contact: myCard)
+                        } label: {
+                            MyCardRow(contact: myCard)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     ForEach(contactSections) { section in
                         Section {
                             ForEach(Array(section.contacts.enumerated()), id: \.element.id) { index, contact in

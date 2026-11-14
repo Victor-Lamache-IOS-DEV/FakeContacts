@@ -16,7 +16,11 @@ struct AmbientBackground: View {
                         .opacity(0.85)
                 } else {
                     LinearGradient(
-                        colors: [tint(brightness: 0.55), tint(brightness: 0.3)],
+                        colors: [
+                            Color(hue: hue, saturation: 0.42, brightness: 0.44),
+                            Color(hue: hue, saturation: 0.50, brightness: 0.18),
+                            Color(hue: (hue + 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.55, brightness: 0.06)
+                        ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -24,17 +28,13 @@ struct AmbientBackground: View {
             }
             .overlay {
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.6), .black],
+                    colors: [.clear, .black.opacity(0.55), .black],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             }
             .clipped()
             .ignoresSafeArea()
-    }
-
-    private func tint(brightness: Double) -> Color {
-        Color(hue: hue, saturation: 0.45, brightness: brightness)
     }
 
     private var hue: Double {

@@ -46,6 +46,7 @@ struct ContactDetailScreen: View {
             }
         }
         .task(id: contact.id) {
+            guard !contact.isForced else { return }
             let identifier = contact.id
             let data = await Task.detached(priority: .userInitiated) {
                 ContactStore.fullImageData(for: identifier)
@@ -164,67 +165,72 @@ struct ContactDetailScreen: View {
 
     // MARK: - Cards
 
+    @ViewBuilder
     private func details(_ presentation: ContactPresentation) -> some View {
-        let hasPhoto = image != nil
+        InfoCard {
+            posterRow
+        }
 
-        return VStack(spacing: 14) {
+        // Phone card: shown only when the contact has phones.
+        if !presentation.phoneNumbers.isEmpty {
             InfoCard {
-                posterRow
-            }
-
-            ForEach(presentation.phoneNumbers) { field in
-                InfoCard {
-                    Button {
-                        open(ContactAction.phoneURL(field.value))
-                    } label: {
-                        InfoRow(
-                            label: ContactLabel.localized(field.label),
-                            value: formatPhone(field.value),
-                            trailingIcon: hasPhoto ? nil : "phone.fill",
-                            valueColor: hasPhoto ? Theme.link : Color.white
-                        )
+                VStack(spacing: 0) {
+                    ForEach(Array(presentation.phoneNumbers.enumerated()), id: \.element.id) { index, field in
+                        phoneRow(field)
+                        if index < presentation.phoneNumbers.count - 1 {
+                            Divider().padding(.leading, 16)
+                        }
                     }
-                    .buttonStyle(.plain)
+
+                    Divider().padding(.leading, 16)
+                    notesBody
                 }
             }
+        }
 
-            ForEach(presentation.emailAddresses) { field in
-                InfoCard {
-                    Button {
-                        open(ContactAction.mailURL(field.value))
-                    } label: {
-                        InfoRow(
-                            label: ContactLabel.localized(field.label),
-                            value: field.value,
-                            valueColor: Theme.link
-                        )
+        // Email card: shown only when the contact has emails.
+        if !presentation.emailAddresses.isEmpty {
+            InfoCard {
+                VStack(spacing: 0) {
+                    ForEach(Array(presentation.emailAddresses.enumerated()), id: \.element.id) { index, field in
+                        emailRow(field)
+                        if index < presentation.emailAddresses.count - 1 {
+                            Divider().padding(.leading, 16)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
             }
+        }
 
-            if let birthdayText = presentation.birthdayText {
-                InfoCard {
-                    InfoRow(
-                        label: NSLocalizedString("birthday", comment: "Birthday field"),
-                        value: birthdayText
-                    )
-                }
+        // Birthday card: shown only when a birthday is present.
+        if let birthdayText = presentation.birthdayText {
+            InfoCard {
+                InfoRow(
+                    label: NSLocalizedString("birthday", comment: "Birthday field"),
+                    value: birthdayText
+                )
             }
+        }
 
+        // Standalone notes card when there is no phone to host it.
+        if presentation.phoneNumbers.isEmpty {
             InfoCard {
                 notesBody
             }
+        }
 
-            InfoCard {
-                sendMessageRow(presentation)
-            }
-
-            InfoCard {
+        InfoCard {
+            VStack(spacing: 0) {
+                if !presentation.phoneNumbers.isEmpty {
+                    sendMessageRow(presentation)
+                    Divider().padding(.leading, 16)
+                }
                 shareRow(presentation)
             }
         }
     }
+
+    // MARK: - Row builders
 
     private var posterRow: some View {
         HStack(spacing: 14) {
@@ -243,6 +249,54 @@ struct ContactDetailScreen: View {
         .padding(12)
     }
 
+    private func phoneRow(_ field: ContactField) -> some View {
+        Button {
+            open(ContactAction.phoneURL(field.value))
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(ContactLabel.localized(field.label))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text(formatPhone(field.value))
+                        .font(.system(size: 17))
+                        .foregroundStyle(.white)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "phone.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Theme.link)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func emailRow(_ field: ContactField) -> some View {
+        Button {
+            open(ContactAction.mailURL(field.value))
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(ContactLabel.localized(field.label))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text(field.value)
+                    .font(.system(size: 17))
+                    .foregroundStyle(Theme.link)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private var notesBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Notes")
@@ -251,7 +305,7 @@ struct ContactDetailScreen: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
     }
 
     private func sendMessageRow(_ presentation: ContactPresentation) -> some View {
@@ -263,7 +317,6 @@ struct ContactDetailScreen: View {
             actionLabel("Send Message")
         }
         .buttonStyle(.plain)
-        .disabled(phone == nil)
     }
 
     private func shareRow(_ presentation: ContactPresentation) -> some View {

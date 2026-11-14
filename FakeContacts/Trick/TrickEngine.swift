@@ -26,6 +26,7 @@ final class TrickEngine: ObservableObject {
     @Published var peekEnabled: Bool = true { didSet { save() } }
     @Published var peekSoundEnabled: Bool = true { didSet { save() } }
     @Published var peekHapticEnabled: Bool = true { didSet { save() } }
+    @Published var myCard = MyCardProfile() { didSet { save() } }
 
     private var isLoaded = false
 
@@ -42,6 +43,7 @@ final class TrickEngine: ObservableObject {
         static let peekHaptic = "peekHapticEnabled"
         static let profiles = "trickProfiles"
         static let forcedContacts = "forcedContacts"
+        static let myCard = "myCardProfile"
     }
 
     init() {
@@ -157,6 +159,24 @@ final class TrickEngine: ObservableObject {
         }
     }
 
+    // MARK: My Card
+
+    var myCardContact: Contact? {
+        let name = myCard.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return nil }
+
+        let phone = myCard.phone.filter(\.isNumber)
+        let email = myCard.email.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return Contact(
+            id: "my-card",
+            name: name,
+            phoneNumbers: phone.isEmpty ? [] : [ContactField(label: "mobile", value: phone)],
+            emailAddresses: email.isEmpty ? [] : [ContactField(label: "email", value: email)],
+            isForced: true
+        )
+    }
+
     // MARK: Persistence
 
     private func save() {
@@ -179,6 +199,9 @@ final class TrickEngine: ObservableObject {
         }
         if let data = try? JSONEncoder().encode(forcedContacts) {
             defaults.set(data, forKey: Key.forcedContacts)
+        }
+        if let data = try? JSONEncoder().encode(myCard) {
+            defaults.set(data, forKey: Key.myCard)
         }
     }
 
@@ -203,6 +226,10 @@ final class TrickEngine: ObservableObject {
         if let data = defaults.data(forKey: Key.forcedContacts),
            let decoded = try? JSONDecoder().decode([ForcedContact].self, from: data) {
             forcedContacts = decoded
+        }
+        if let data = defaults.data(forKey: Key.myCard),
+           let decoded = try? JSONDecoder().decode(MyCardProfile.self, from: data) {
+            myCard = decoded
         }
 
         isLoaded = true

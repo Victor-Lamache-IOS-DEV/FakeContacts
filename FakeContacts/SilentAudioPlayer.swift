@@ -1,25 +1,27 @@
 import Foundation
 import AVFAudio
-import AVFoundation
 
 // MARK: - Silent Audio Player
 //
-// Forces the hardware volume buttons to control the *media/playback* volume
-// instead of the ringer volume by keeping a silent audio session active.
-// This makes `AVAudioSession.outputVolume` KVO fire reliably even when the
-// Ring/Silent switch is set to silent, which is what the volume-button "peek"
-// trick relies on.
+// Force les boutons hardware à contrôler le volume *media* (playback) plutôt
+// que le volume sonnerie, en maintenant une session audio silencieuse active.
+// Ainsi l'observateur KVO sur AVAudioSession.outputVolume déclenche même quand
+// le bouton Ring/Silent est sur silencieux — c'est ce qui fait marcher le peek.
 final class SilentAudioPlayer: NSObject, ObservableObject {
     static let shared = SilentAudioPlayer()
 
     private let engine = AVAudioEngine()
-    private let silentSource = AVAudioSourceNode { _, _, frameCount, audioBufferList -> OSStatus in
-        let abl = UnsafeMutableAudioBufferListPointer(audioBufferList)
-        for buffer in abl {
-            if let data = buffer.mData {
-                let byteCount = Int(buffer.mDataByteSize)
-                data.withMemoryRebound(to: UInt8.self, capacity: byteCount) { ptr in
-                    ptr.initialize(repeating: 0, count: byteCount)
+    private let sourceNode = AVAudioSourceNode { _, _, frameCount, audioBufferList -> OSStatus in
+        var abl = audioBufferList.pointee
+        for i in 0..<Int(abl.mNumberBuffers) {
+            withUnsafeMutablePointer(to: &abl.mBuffers) { ptr in
+                let bufferPtr = ptr.advanced(by: i).assumingMemoryBound(to: AudioBuffer.self)
+                var buffer = bufferPtr.pointee
+                if let data = buffer.mData {
+                    let byteCount = Int(buffer.mDataByteSize)
+                    data.withMemoryRebound(to: UInt8.self, capacity: byteCount) {
+                        $0.initialize(repeating: 0, count: byteCount)
+                    }
                 }
             }
         }
@@ -28,18 +30,13 @@ final class SilentAudioPlayer: NSObject, ObservableObject {
 
     private(set) var isPlaying = false
 
-    override init() {
-        super.init()
-    }
-
     func start() {
         guard !isPlaying else { return }
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers, .duckOthers])
+            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
-
-            engine.attach(silentSource)
-            engine.connect(silentSource, to: engine.mainMixerNode, format: nil)
+            engine.attach(sourceNode)
+            engine.connect(sourceNode, to: engine.mainMixerNode, format: nil)
             try engine.start()
             isPlaying = true
         } catch {
@@ -50,8 +47,8 @@ final class SilentAudioPlayer: NSObject, ObservableObject {
     func stop() {
         guard isPlaying else { return }
         engine.stop()
-        engine.disconnectNodeInput(silentSource)
-        engine.detach(silentSource)
+        engine.disconnectNodeInput(sourceNode)
+        engine.detach(sourceNode)
         try? AVAudioSession.sharedInstance().setActive(false)
         isPlaying = false
     }

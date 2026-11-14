@@ -1,14 +1,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Scroll Offset Preference Key
-struct ScrollOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 // MARK: - Hex Color
 extension Color {
     init(hex: String) {
@@ -65,25 +57,15 @@ struct AvatarView: View {
                 .scaledToFill()
                 .frame(width: size, height: size)
                 .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.25), lineWidth: 2)
-                )
-                .shadow(radius: 8)
         } else {
             ZStack {
                 Circle()
                     .fill(Color(hex: "a2a8b4"))
                     .frame(width: size, height: size)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
-                    )
                 Text(initials)
                     .font(.system(size: size * 0.38, weight: .semibold))
                     .foregroundColor(.white)
             }
-            .shadow(radius: 6)
         }
     }
 
@@ -125,15 +107,8 @@ struct ContactDetailView: View {
             let topInset = geo.safeAreaInsets.top
 
             ZStack(alignment: .top) {
-                // iOS 26 glass background
-                if #available(iOS 26.0, *) {
-                    Color(.systemGroupedBackground)
-                        .glassEffect()
-                        .ignoresSafeArea()
-                } else {
-                    Color.black
-                        .ignoresSafeArea()
-                }
+                Color.black
+                    .ignoresSafeArea()
 
                 backgroundColor
                     .frame(height: topInset + 200)
@@ -179,7 +154,7 @@ struct ContactDetailView: View {
                         // ── DATA ZONE ────────────────────────────────
                         VStack(spacing: 10) {
 
-                            GlassCard {
+                            DataCard {
                                 HStack(spacing: 12) {
                                     AvatarView(contact: contact, size: 40)
                                     Text("Contact Photo & Poster")
@@ -194,7 +169,7 @@ struct ContactDetailView: View {
                             }
 
                             if !snapshotPhone.isEmpty {
-                                GlassCard {
+                                DataCard {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("mobile")
                                             .font(.system(size: 13.5))
@@ -208,7 +183,7 @@ struct ContactDetailView: View {
                                 }
                             }
 
-                            GlassCard {
+                            DataCard {
                                 HStack {
                                     Text("FaceTime")
                                         .font(.system(size: 17.7))
@@ -223,7 +198,7 @@ struct ContactDetailView: View {
                             }
 
                             if !snapshotEmail.isEmpty {
-                                GlassCard {
+                                DataCard {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("email")
                                             .font(.system(size: 13.5))
@@ -238,7 +213,7 @@ struct ContactDetailView: View {
                             }
 
                             if !snapshotBirthday.isEmpty {
-                                GlassCard {
+                                DataCard {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("birthday")
                                             .font(.system(size: 13.5))
@@ -252,7 +227,7 @@ struct ContactDetailView: View {
                                 }
                             }
 
-                            GlassCard {
+                            DataCard {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Notes")
                                         .font(.system(size: 13.5))
@@ -267,7 +242,7 @@ struct ContactDetailView: View {
                                 .padding(.vertical, 10)
                             }
 
-                            GlassCard {
+                            DataCard {
                                 VStack(spacing: 0) {
                                     BottomRow(label: "Send Message",      color: .blue)
                                     Divider().background(Color(.systemGray5))
@@ -277,8 +252,8 @@ struct ContactDetailView: View {
                                 }
                             }
 
-                            GlassCard { BottomRow(label: "Add to Emergency Contacts", color: .blue) }
-                            GlassCard { BottomRow(label: "Share my Location", color: .blue) }
+                            DataCard { BottomRow(label: "Add to Emergency Contacts", color: .blue) }
+                            DataCard { BottomRow(label: "Share my Location", color: .blue) }
 
                             Spacer().frame(height: 40)
                         }
@@ -292,26 +267,26 @@ struct ContactDetailView: View {
         .navigationBarBackButtonHidden(true)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        // Visible glass toolbar background so back/edit icons render clearly
-        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        // Barre d'outils native avec fond matériel pour que les icônes soient lisibles
+        .toolbarBackground(.regularMaterial, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
+                        .foregroundColor(.blue)
+                        .padding(8)
+                        .background(.regularMaterial)
                         .clipShape(Circle())
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Text("Edit")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.blue)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(.ultraThinMaterial)
+                    .background(.regularMaterial)
                     .clipShape(Capsule())
             }
         }
@@ -331,10 +306,9 @@ struct ContactDetailView: View {
                 snapshotBirthday = profile?.fakeBirthday.isEmpty == false ? profile!.fakeBirthday : contact.birthday
                 startTimer()
             }
-            // Save for volume-button trick (persisted across launches)
+            // Sauvegarde pour le peek bouton volume (persisté d'un lancement à l'autre)
             trickEngine.markLastOpened(contact, phone: snapshotPhone)
 
-            // Calculate background color once
             if hasPhoto {
                 backgroundColor = contact.thumbnailImage?.dominantColor ?? Color(hex: "4f5054")
             }
@@ -394,6 +368,18 @@ struct FaceTimeBtn: View {
                     .font(.system(size: 15))
                     .foregroundColor(.blue)
             )
+    }
+}
+
+// MARK: - Data Card
+struct DataCard<Content: View>: View {
+    @ViewBuilder let content: Content
+    var body: some View {
+        content
+            .padding(.horizontal, 14)
+            .background(Color(hex: "1c1c1e"))
+            .cornerRadius(10)
+            .padding(.horizontal, 6)
     }
 }
 

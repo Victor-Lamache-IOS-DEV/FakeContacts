@@ -20,8 +20,8 @@ struct AmbientBackground: View {
                             Color(red: 0.25, green: 0.28, blue: 0.45),
                             Color(red: 0.08, green: 0.08, blue: 0.20)
                         ],
-                        startPoint: .top,
-                        endPoint: .bottom
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
                 }
             }

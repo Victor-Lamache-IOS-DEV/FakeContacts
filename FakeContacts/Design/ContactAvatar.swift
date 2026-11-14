@@ -59,26 +59,28 @@ struct ContactAvatar: View {
         case .glass:
             ZStack {
                 Circle()
-                    .glassEffect(.regular, in: .circle)
+                    .fill(.white.opacity(0.09))
 
-                Circle()
-                    .strokeBorder(Color.black.opacity(0.3), lineWidth: 6)
-                    .blur(radius: 8)
-                    .offset(y: 4)
-
-                Circle()
+                Ellipse()
                     .fill(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.2), .clear],
+                            colors: [Color.white.opacity(0.35), .clear],
                             startPoint: .top,
-                            endPoint: .center
+                            endPoint: .bottom
                         )
                     )
+                    .frame(width: size * 0.7, height: size * 0.34)
+                    .offset(y: -size * 0.27)
+
+                Circle()
+                    .strokeBorder(Color.black.opacity(0.25), lineWidth: 5)
+                    .blur(radius: 7)
+                    .offset(y: 3)
 
                 Circle()
                     .strokeBorder(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.5), .clear, Color.white.opacity(0.08)],
+                            colors: [Color.white.opacity(0.55), .clear, Color.white.opacity(0.06)],
                             startPoint: .top,
                             endPoint: .bottom
                         ),

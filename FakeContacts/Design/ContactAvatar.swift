@@ -35,10 +35,27 @@ struct ContactAvatar: View {
             ZStack {
                 Circle()
                     .fill(Theme.listAvatarFill)
+
+                Circle()
+                    .strokeBorder(Color.black.opacity(0.4), lineWidth: 6)
+                    .blur(radius: 4)
+
+                Circle()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.35), .clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        ),
+                        lineWidth: 1
+                    )
+
                 Text(initials)
                     .font(.system(size: size * 0.45, weight: .semibold))
                     .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
             }
+            .shadow(color: .black.opacity(0.3), radius: size * 0.05, y: size * 0.03)
         case .glass:
             ZStack {
                 Circle()

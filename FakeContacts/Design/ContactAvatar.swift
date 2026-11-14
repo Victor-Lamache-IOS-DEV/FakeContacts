@@ -59,12 +59,12 @@ struct ContactAvatar: View {
         case .glass:
             ZStack {
                 Circle()
-                    .fill(.white.opacity(0.09))
+                    .fill(.white.opacity(0.06))
 
                 Ellipse()
                     .fill(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.35), .clear],
+                            colors: [Color.white.opacity(0.16), .clear],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -73,18 +73,18 @@ struct ContactAvatar: View {
                     .offset(y: -size * 0.27)
 
                 Circle()
-                    .strokeBorder(Color.black.opacity(0.25), lineWidth: 5)
-                    .blur(radius: 7)
-                    .offset(y: 3)
+                    .strokeBorder(Color.black.opacity(0.3), lineWidth: 7)
+                    .blur(radius: 8)
+                    .offset(y: 4)
 
                 Circle()
                     .strokeBorder(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.55), .clear, Color.white.opacity(0.06)],
+                            colors: [Color.white.opacity(0.38), .clear, Color.white.opacity(0.14)],
                             startPoint: .top,
                             endPoint: .bottom
                         ),
-                        lineWidth: 1.5
+                        lineWidth: 3
                     )
 
                 Text(initials)

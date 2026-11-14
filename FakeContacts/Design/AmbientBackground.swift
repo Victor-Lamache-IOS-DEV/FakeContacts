@@ -24,8 +24,8 @@ struct AmbientBackground: View {
                             .init(color: Color(red: 0.118, green: 0.075, blue: 0.200), location: 0.75),
                             .init(color: Color(red: 0.027, green: 0.020, blue: 0.075), location: 1.0)
                         ],
-                        startPoint: .top,
-                        endPoint: .bottom
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
                 }
             }

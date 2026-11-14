@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CoreImage
 
 // MARK: - Hex Color
 extension Color {
@@ -12,6 +13,38 @@ extension Color {
             green: Double((int >> 8)  & 0xFF) / 255,
             blue:  Double(int         & 0xFF) / 255
         )
+    }
+}
+
+// MARK: - Muted background color from a photo
+//
+// Moyenne fiable via Core Image, puis désaturation + assombrissement pour
+// obtenir le fond uni gris-bleu de la fiche Contacts de référence.
+private let ciContext = CIContext(options: nil)
+
+extension UIImage {
+    var mutedBackgroundColor: Color? {
+        guard let ciImage = CIImage(image: self),
+              let filter = CIFilter(name: "CIAreaAverage") else { return nil }
+
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        filter.setValue(CIVector(cgRect: ciImage.extent), forKey: kCIInputExtentKey)
+        guard let output = filter.outputImage else { return nil }
+
+        var bitmap = [UInt8](repeating: 0, count: 4)
+        ciContext.render(output, toBitmap: &bitmap, rowBytes: 4,
+                         bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                         format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())
+
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(red:   CGFloat(bitmap[0]) / 255,
+                green: CGFloat(bitmap[1]) / 255,
+                blue:  CGFloat(bitmap[2]) / 255,
+                alpha: 1).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+
+        let saturation = min(max(s * 0.8, 0.08), 0.20)
+        let brightness = min(max(b * 0.55, 0.28), 0.42)
+        return Color(hue: Double(h), saturation: Double(saturation), brightness: Double(brightness))
     }
 }
 
@@ -31,13 +64,11 @@ struct AvatarView: View {
         } else {
             ZStack {
                 if large {
-                    // Grand avatar de la fiche : cercle translucide cerclé,
-                    // exactement comme Contacts quand il n'y a pas de photo.
+                    // Grand avatar sans photo : cercle translucide cerclé.
                     Circle().fill(Color.white.opacity(0.05))
                     Circle().strokeBorder(Color.white.opacity(0.22), lineWidth: 1.2)
                 } else {
-                    // Petit avatar : dégradé violet-gris fixe (aucune couleur
-                    // aléatoire), identique à la référence Contacts.
+                    // Petit avatar : dégradé violet-gris fixe, aucune couleur aléatoire.
                     Circle().fill(
                         LinearGradient(colors: [Color(hex: "6C6478"), Color(hex: "4A4456")],
                                        startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -76,164 +107,160 @@ struct ContactDetailView: View {
     @State private var ticker: Timer?           = nil
     @State private var hasAdvanced              = false
 
+    // Fond uni (contact avec photo) — valeur de repli avant le calcul.
+    @State private var photoBackground: Color = Color(hex: "5B6870")
+
     init(contact: Contact, fromSearch: Bool = false, searchPrefix: String = "") {
         self.contact = contact
         self.fromSearch = fromSearch
         self.searchPrefix = searchPrefix
     }
 
-    var hasPhoto: Bool { contact.thumbnailImage != nil }
-
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
+        ZStack {
+            // Fond plein écran, TOTALEMENT séparé du ScrollView :
+            // il passe derrière la barre d'état et la barre de navigation,
+            // donc le haut ne peut jamais être coupé ni créer de couture.
+            Color.black
+                .ignoresSafeArea()
 
-                // ── HEADER ──────────────────────────────────
-                // Hauteur naturelle : plus de frame fixe, donc plus de
-                // contenu rogné ni de bande vide sous les boutons.
+            background
+                .ignoresSafeArea()
+
+            ScrollView {
                 VStack(spacing: 0) {
-                    AvatarView(contact: contact, size: hasPhoto ? 240 : 230, large: true)
-                        .padding(.top, 16)
-                        .padding(.bottom, 14)
+
+                    AvatarView(contact: contact, size: 200, large: true)
+                        .padding(.top, 24)
+                        .padding(.bottom, 26)
 
                     Text(contact.name)
                         .font(.system(size: 34, weight: .semibold))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 24)
                         .padding(.bottom, 20)
 
-                    HStack(spacing: 22) {
+                    HStack(spacing: 14) {
                         ActionBtn(icon: "message.fill")
                         ActionBtn(icon: "phone.fill")
                         ActionBtn(icon: "video.fill")
                         ActionBtn(icon: "envelope.fill", dimmed: true)
                     }
-                    .padding(.bottom, 26)
-                }
-                .frame(maxWidth: .infinity)
-                .background {
-                    // Le fond remonte sous la barre de navigation et la
-                    // barre d'état : plus aucune couture visible.
-                    headerBackground
-                        .ignoresSafeArea(edges: .top)
-                }
+                    .padding(.bottom, 24)
 
-                // ── DATA ZONE ────────────────────────────────
-                VStack(spacing: 10) {
+                    VStack(spacing: 10) {
 
-                    DataCard {
-                        HStack(spacing: 12) {
-                            AvatarView(contact: contact, size: 40)
-                            Text("Contact Photo & Poster")
-                                .font(.system(size: 17.7))
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 13.5, weight: .semibold))
-                                .foregroundColor(Color(.systemGray3))
+                        DataCard {
+                            HStack(spacing: 12) {
+                                AvatarView(contact: contact, size: 40)
+                                Text("Contact Photo & Poster")
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.white.opacity(0.35))
+                            }
+                            .padding(.vertical, 10)
                         }
-                        .padding(.vertical, 10)
-                    }
 
-                    // Téléphone + Notes groupés dans une seule carte (comme Contacts)
-                    DataCard {
-                        VStack(alignment: .leading, spacing: 0) {
-                            if !snapshotPhone.isEmpty {
+                        // Téléphone + Notes dans une seule carte (comme Contacts)
+                        DataCard {
+                            VStack(alignment: .leading, spacing: 0) {
+                                if !snapshotPhone.isEmpty {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text("phone")
+                                                .font(.system(size: 13))
+                                                .foregroundStyle(Color.white.opacity(0.55))
+                                            Text(snapshotPhone)
+                                                .font(.system(size: 17))
+                                                .foregroundStyle(.white)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "phone.fill")
+                                            .font(.system(size: 17))
+                                            .foregroundStyle(.white)
+                                    }
+                                    .padding(.vertical, 12)
+
+                                    Divider()
+                                }
+
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Notes")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.white.opacity(0.55))
+                                    if !snapshotNote.isEmpty {
+                                        Text(snapshotNote)
+                                            .font(.system(size: 17))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 70, alignment: .topLeading)
+                                .padding(.vertical, 12)
+                            }
+                        }
+
+                        if !snapshotEmail.isEmpty {
+                            DataCard {
                                 HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("mobile")
-                                            .font(.system(size: 13.5))
-                                            .foregroundColor(.secondary)
-                                        Text(snapshotPhone)
-                                            .font(.system(size: 17.7))
-                                            .foregroundColor(.blue)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("email")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(Color.white.opacity(0.55))
+                                        Text(snapshotEmail)
+                                            .font(.system(size: 17))
+                                            .foregroundStyle(.white)
                                     }
                                     Spacer()
-                                    Image(systemName: "phone.fill")
+                                    Image(systemName: "envelope.fill")
                                         .font(.system(size: 17))
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.white)
                                 }
-                                .padding(.vertical, 12)
+                                .padding(.vertical, 10)
+                            }
+                        }
+
+                        if !snapshotBirthday.isEmpty {
+                            DataCard {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("birthday")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.white.opacity(0.55))
+                                    Text(snapshotBirthday)
+                                        .font(.system(size: 17))
+                                        .foregroundStyle(.white)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 10)
+                            }
+                        }
+
+                        DataCard {
+                            VStack(spacing: 0) {
+                                BottomRow(label: "Send Message")
                                 Divider()
+                                BottomRow(label: "Share Contact")
+                                Divider()
+                                BottomRow(label: "Add to Favourites")
                             }
-
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Notes")
-                                    .font(.system(size: 13.5))
-                                    .foregroundColor(.secondary)
-                                if !snapshotNote.isEmpty {
-                                    Text(snapshotNote)
-                                        .font(.system(size: 17.7))
-                                        .foregroundColor(.primary)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 70, alignment: .topLeading)
-                            .padding(.vertical, 12)
                         }
+
+                        DataCard { BottomRow(label: "Add to Emergency Contacts") }
+                        DataCard { BottomRow(label: "Share my Location") }
+
+                        Spacer().frame(height: 24)
                     }
-
-                    if !snapshotEmail.isEmpty {
-                        DataCard {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("email")
-                                        .font(.system(size: 13.5))
-                                        .foregroundColor(.secondary)
-                                    Text(snapshotEmail)
-                                        .font(.system(size: 17.7))
-                                        .foregroundColor(.blue)
-                                }
-                                Spacer()
-                                Image(systemName: "envelope.fill")
-                                    .font(.system(size: 17))
-                                    .foregroundColor(.blue)
-                            }
-                            .padding(.vertical, 10)
-                        }
-                    }
-
-                    if !snapshotBirthday.isEmpty {
-                        DataCard {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("birthday")
-                                    .font(.system(size: 13.5))
-                                    .foregroundColor(.secondary)
-                                Text(snapshotBirthday)
-                                    .font(.system(size: 17.7))
-                                    .foregroundColor(.primary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 10)
-                        }
-                    }
-
-                    DataCard {
-                        VStack(spacing: 0) {
-                            BottomRow(label: "Send Message",      color: .blue)
-                            Divider().background(Color(.systemGray5))
-                            BottomRow(label: "Share Contact",     color: .blue)
-                            Divider().background(Color(.systemGray5))
-                            BottomRow(label: "Add to Favourites", color: .blue)
-                        }
-                    }
-
-                    DataCard { BottomRow(label: "Add to Emergency Contacts", color: .blue) }
-                    DataCard { BottomRow(label: "Share my Location", color: .blue) }
-
-                    Spacer().frame(height: 40)
+                    .padding(.horizontal, 22)
                 }
-                .padding(.top, 14)
-                .background(Color.black)
             }
         }
-        // Autorise le fond du header à remonter sous la barre de navigation.
-        .scrollClipDisabled()
-        .background(Color.black.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        // Barre transparente : le header passe dessous, sans raccord.
+        // Barre transparente : le fond plein écran reste continu derrière.
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
@@ -243,9 +270,7 @@ struct ContactDetailView: View {
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 42, height: 42)
-                        .background {
-                            Circle().fill(Color.black)
-                        }
+                        .background { Circle().fill(Color.black) }
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -254,9 +279,7 @@ struct ContactDetailView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 9)
-                    .background {
-                        Capsule().fill(Color.black)
-                    }
+                    .background { Capsule().fill(Color.black) }
             }
         }
         .onAppear {
@@ -277,43 +300,31 @@ struct ContactDetailView: View {
             }
             // Sauvegarde pour le peek bouton volume (persisté)
             trickEngine.markLastOpened(contact, phone: snapshotPhone)
+
+            if let img = contact.thumbnailImage,
+               let muted = img.mutedBackgroundColor {
+                photoBackground = muted
+            }
         }
         .onDisappear { stopTimer() }
     }
 
-    // MARK: - Header background
-    private var headerBackground: some View {
-        GeometryReader { geo in
-            ZStack {
-                if let img = contact.thumbnailImage {
-                    // Photo : version floutée + dégradé sombre (poster).
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .clipped()
-                        .blur(radius: 45, opaque: true)
-                        .scaleEffect(1.2)
-
-                    LinearGradient(stops: [
-                        .init(color: .black.opacity(0.10), location: 0),
-                        .init(color: .black.opacity(0.45), location: 0.55),
-                        .init(color: .black, location: 1)
-                    ], startPoint: .top, endPoint: .bottom)
-                } else {
-                    // Sans photo : dégradé fixe bleu-gris → lavande → noir,
-                    // exactement comme la fiche Contacts de référence.
-                    LinearGradient(stops: [
-                        .init(color: Color(hex: "A3ADB6"), location: 0.00),
-                        .init(color: Color(hex: "8D9AAB"), location: 0.20),
-                        .init(color: Color(hex: "8B86A6"), location: 0.45),
-                        .init(color: Color(hex: "4C4559"), location: 0.72),
-                        .init(color: Color(hex: "1A181F"), location: 0.92),
-                        .init(color: .black, location: 1.00)
-                    ], startPoint: .top, endPoint: .bottom)
-                }
-            }
-            .clipped()
+    // MARK: - Full-screen background
+    @ViewBuilder
+    private var background: some View {
+        if contact.thumbnailImage != nil {
+            // Couleur unie dérivée de la photo, comme la fiche de référence.
+            photoBackground
+        } else {
+            // Sans photo : dégradé fixe bleu-gris → lavande → sombre.
+            LinearGradient(stops: [
+                .init(color: Color(hex: "A6B0B7"), location: 0.00),
+                .init(color: Color(hex: "8E99A6"), location: 0.22),
+                .init(color: Color(hex: "8A86A4"), location: 0.45),
+                .init(color: Color(hex: "4B4557"), location: 0.70),
+                .init(color: Color(hex: "24202C"), location: 0.88),
+                .init(color: Color(hex: "151319"), location: 1.00)
+            ], startPoint: .top, endPoint: .bottom)
         }
     }
 
@@ -341,11 +352,11 @@ struct ActionBtn: View {
     var body: some View {
         Circle()
             .fill(Color.black.opacity(0.55))
-            .frame(width: 66, height: 66)
+            .frame(width: 62, height: 62)
             .overlay(
                 Image(systemName: icon)
-                    .font(.system(size: 26))
-                    .foregroundStyle(dimmed ? Color.white.opacity(0.4) : .white)
+                    .font(.system(size: 24))
+                    .foregroundStyle(dimmed ? Color.white.opacity(0.35) : .white)
             )
     }
 }
@@ -353,24 +364,24 @@ struct ActionBtn: View {
 // MARK: - Data Card
 struct DataCard<Content: View>: View {
     @ViewBuilder let content: Content
+
     var body: some View {
         content
-            .padding(.horizontal, 14)
-            .background(Color(hex: "1c1c1e"))
-            .cornerRadius(12)
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 16)
+            .background(Color.black.opacity(0.45))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
 // MARK: - Bottom Row
 struct BottomRow: View {
     let label: String
-    let color: Color
+
     var body: some View {
         Button(action: {}) {
             Text(label)
-                .font(.system(size: 17.7))
-                .foregroundColor(color)
+                .font(.system(size: 17))
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 12)
         }

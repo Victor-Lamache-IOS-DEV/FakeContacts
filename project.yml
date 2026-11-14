@@ -33,3 +33,15 @@ targets:
     dependencies:
       - sdk: MediaPlayer.framework
       - sdk: AudioToolbox.framework
+  FakeContactsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - FakeContactsTests
+    dependencies:
+      - target: FakeContacts
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+        SWIFT_VERSION: "5.9"

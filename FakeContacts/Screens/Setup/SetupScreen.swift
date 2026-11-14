@@ -2,8 +2,10 @@ import SwiftUI
 import UIKit
 import PhotosUI
 
-struct SetupScreen: View {    @EnvironmentObject private var trickEngine: TrickEngine
+struct SetupScreen: View {
+    @EnvironmentObject private var trickEngine: TrickEngine
     @Environment(\.dismiss) private var dismiss
+    @State private var photoItem: PhotosPickerItem?
 
     var body: some View {
         NavigationStack {
@@ -33,8 +35,6 @@ struct SetupScreen: View {    @EnvironmentObject private var trickEngine: TrickE
     }
 
     // MARK: - My Card
-
-    @State private var photoItem: PhotosPickerItem?
 
     private var myCardSection: some View {
         Section {

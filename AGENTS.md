@@ -46,4 +46,4 @@ Aucun build local possible (Windows). **Seule validation = GitHub Actions.**
 - ❌ Conclure "ça compile" sans CI → ✅ dire que seul le build CI le prouve.
 
 ## 6. Mise à jour
-À la fin de chaque session, proposer d'ajouter ici (projet) et dans `~/.claude/CLAUDE.md` (général) les leçons apprises.
+À la fin de chaque session, proposer d'ajouter ici (projet) et dans `~/.config/opencode/AGENTS.md` (général) les leçons apprises.
